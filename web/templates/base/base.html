@@ -18,6 +18,8 @@
     <link href="{% static 'plugins/sweetalert2/sweetalert2.min.css' %}" rel="stylesheet" type="text/css" />
     <link href="{% static 'plugins/switches/switches.min.css' %}" rel="stylesheet" type="text/css" />
     <link href="{% static 'custom/custom.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'custom/rengine-pro.css' %}" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" type="text/css" href="{% static 'plugins/datatable/global.css' %}">
     <!-- <link rel="stylesheet" type="text/css" href="{% static 'plugins/datatable/custom.css' %}"> -->
@@ -58,7 +60,9 @@
     {% endblock custom_js_css_link %}
   </head>
 
-  <body class="loading" data-layout-mode="horizontal">
+  <body class="loading" data-layout-mode="horizontal" data-theme="dark">
+    <!-- Page load progress bar -->
+    <div class="page-loading-bar" id="page-load-bar" style="width:0%"></div>
     <!-- Topbar begins -->
     {% include 'base/_items/top_bar.html' %}
     {# topbar ends #}
@@ -100,6 +104,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.8/purify.min.js"></script>
     <script src="{% static 'assets/js/app.min.js' %}"></script>
     <script src="{% static 'custom/custom.js' %}"></script>
+    <script src="{% static 'custom/rengine-pro.js' %}"></script>
     <script src="{% static 'custom/toolbox.js' %}"></script>
     <script src="{% static 'custom/right_sidebar.js' %}"></script>
     <script src="{% static 'custom/port_display.js' %}"></script>

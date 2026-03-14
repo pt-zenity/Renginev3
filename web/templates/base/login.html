@@ -1,116 +1,667 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8" />
-  <title>Login reNgine-ng</title>
+  <title>reNgine-ng — Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token }}">
-  <link href="{% static 'bootstrap/bootstrap.min.css' %}" rel="stylesheet" type="text/css" id="bootstrap-stylesheet" />
-  <link href="{% static 'assets/css/app.min.css' %}" rel="stylesheet" type="text/css" id="main-stylesheet" />
-  <link href="{% static 'bootstrap/bootstrap-dark.min.css' %}" rel="stylesheet" type="text/css" id="bootstrap-dark-stylesheet" />
-  <link href="{% static 'assets/css/app-dark.min.css' %}" rel="stylesheet" type="text/css" id="main-dark-stylesheet" />
+  <link href="{% static 'bootstrap/bootstrap-dark.min.css' %}" rel="stylesheet" type="text/css" />
+  <link href="{% static 'assets/css/app-dark.min.css' %}" rel="stylesheet" type="text/css" />
   <link href="{% static 'assets/css/icons.min.css' %}" rel="stylesheet" type="text/css" />
-  <style media="screen">
-    @font-face {
-      font-family: "Cerebri Sans,sans-serif";
-      src: url("{% static 'fonts/cerebrisans-light.eot' %}");
-      src: local("Cerebri-sans Light"), url("{% static 'fonts/cerebrisans-light.woff' %}") format("woff");
-      font-weight: 300; }
+  <link rel="shortcut icon" href="/staticfiles/img/favicon.png">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
 
-    @font-face {
-      font-family: "Cerebri Sans,sans-serif";
-      src: url("{% static 'fonts/cerebrisans-regular.eot' %}");
-      src: local("Cerebri-sans Regular"), url("{% static 'fonts/cerebrisans-regular.woff' %}") format("woff");
-      font-weight: 400; }
+  <style>
+    /* ── Core Variables ── */
+    :root {
+      --bg:       #0a0e1a;
+      --bg-card:  rgba(17, 24, 39, 0.88);
+      --border:   rgba(59, 130, 246, 0.18);
+      --blue:     #3b82f6;
+      --cyan:     #06b6d4;
+      --green:    #10b981;
+      --red:      #ef4444;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --subtle:   #94a3b8;
+      --grad:     linear-gradient(135deg, #3b82f6, #06b6d4);
+    }
 
-    @font-face {
-      font-family: "Cerebri Sans,sans-serif";
-      src: url("{% static 'fonts/cerebrisans-medium.eot' %}");
-      src: local("Cerebri-sans Medium"), url("{% static 'fonts/cerebrisans-medium.woff' %}") format("woff");
-      font-weight: 500; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    @font-face {
-      font-family: "Cerebri Sans,sans-serif";
-      src: url("{% static 'fonts/cerebrisans-semibold.eot' %}");
-      src: local("Cerebri-sans Semibold"), url("{% static 'fonts/cerebrisans-semibold.woff' %}") format("woff");
-      font-weight: 600; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow: hidden;
+    }
 
-    @font-face {
-      font-family: "Cerebri Sans,sans-serif";
-      src: url("{% static 'fonts/cerebrisans-bold.eot' %}");
-      src: local("Cerebri-sans Bold"), url("{% static 'fonts/cerebrisans-bold.woff' %}") format("woff");
-      font-weight: 700; }
+    /* ── Animated Background ── */
+    .bg-scene {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    /* Grid */
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    /* Glowing orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      animation: orbFloat 8s ease-in-out infinite;
+    }
+
+    .orb-1 {
+      width: 500px; height: 500px;
+      background: var(--blue);
+      top: -150px; left: -100px;
+      animation-delay: 0s;
+    }
+
+    .orb-2 {
+      width: 400px; height: 400px;
+      background: #8b5cf6;
+      bottom: -100px; right: -80px;
+      animation-delay: -3s;
+    }
+
+    .orb-3 {
+      width: 250px; height: 250px;
+      background: var(--cyan);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      animation-delay: -5s;
+    }
+
+    @keyframes orbFloat {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33%       { transform: translate(30px, -30px) scale(1.05); }
+      66%       { transform: translate(-20px, 20px) scale(0.97); }
+    }
+
+    /* Scanning line */
+    .scan-line {
+      position: absolute;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(59,130,246,0.4), transparent);
+      animation: scanLine 4s linear infinite;
+      box-shadow: 0 0 15px rgba(59,130,246,0.3);
+    }
+
+    @keyframes scanLine {
+      0%   { top: -2px; opacity: 0; }
+      5%   { opacity: 1; }
+      95%  { opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+
+    /* Floating particles */
+    .particle {
+      position: absolute;
+      width: 3px; height: 3px;
+      border-radius: 50%;
+      background: var(--blue);
+      opacity: 0;
+      animation: particleFly linear infinite;
+    }
+
+    @keyframes particleFly {
+      0%   { transform: translateY(100vh) translateX(0); opacity: 0; }
+      10%  { opacity: 0.6; }
+      90%  { opacity: 0.6; }
+      100% { transform: translateY(-20px) translateX(var(--drift, 30px)); opacity: 0; }
+    }
+
+    /* ── Login Container ── */
+    .login-container {
+      position: relative;
+      z-index: 10;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* ── Login Card ── */
+    .login-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(28px) saturate(160%);
+      -webkit-backdrop-filter: blur(28px) saturate(160%);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 44px 40px;
+      width: 100%;
+      max-width: 430px;
+      box-shadow:
+        0 25px 60px rgba(0, 0, 0, 0.7),
+        0 0 80px rgba(59,130,246,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+      animation: cardSlideIn 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Top accent line */
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--grad);
+      border-radius: 20px 20px 0 0;
+    }
+
+    /* Subtle inner glow */
+    .login-card::after {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    @keyframes cardSlideIn {
+      from { opacity: 0; transform: translateY(24px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── Logo Header ── */
+    .login-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .login-logo-icon {
+      width: 64px; height: 64px;
+      margin: 0 auto 14px;
+      background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(6,182,212,0.15));
+      border: 1px solid rgba(59,130,246,0.25);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      box-shadow: 0 8px 24px rgba(59,130,246,0.2);
+      animation: iconPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes iconPulse {
+      0%, 100% { box-shadow: 0 8px 24px rgba(59,130,246,0.2); }
+      50%       { box-shadow: 0 8px 32px rgba(59,130,246,0.4); }
+    }
+
+    .login-title {
+      font-size: 1.75rem !important;
+      font-weight: 800;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.04em;
+      margin-bottom: 4px;
+    }
+
+    .login-subtitle {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .login-version {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 3px 12px;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.25);
+      border-radius: 20px;
+      color: #60a5fa;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    /* ── Status Strip ── */
+    .system-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(16,185,129,0.07);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-radius: 8px;
+      margin-bottom: 24px;
+      font-size: 0.78rem;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(16,185,129,0.5);
+      animation: dotPulse 1.5s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes dotPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.75); }
+    }
+
+    .status-text { color: var(--green); font-weight: 500; }
+    .status-sep  { color: var(--muted); }
+    .status-detail { color: var(--muted); }
+
+    /* ── Alert Boxes ── */
+    .info-alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      background: rgba(59,130,246,0.07);
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.82rem;
+      color: var(--subtle);
+    }
+
+    .info-alert i { color: var(--blue); margin-top: 1px; flex-shrink: 0; }
+    .info-alert a { color: #60a5fa; text-decoration: none; font-weight: 500; }
+    .info-alert a:hover { color: var(--cyan); text-decoration: underline; }
+
+    .error-alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.82rem;
+      color: #fca5a5;
+    }
+
+    .error-alert i { color: var(--red); margin-top: 1px; flex-shrink: 0; }
+
+    .warn-alert {
+      padding: 10px 14px;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.82rem;
+      color: #fcd34d;
+    }
+
+    /* ── Form Styles ── */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 0.9rem;
+      transition: color 0.2s;
+      z-index: 2;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 14px 12px 40px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(59,130,246,0.15);
+      border-radius: 9px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: all 0.25s ease;
+      -webkit-appearance: none;
+    }
+
+    .form-input::placeholder { color: var(--muted); }
+
+    .form-input:focus {
+      background: rgba(59,130,246,0.06);
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+
+    .form-input:focus + .input-icon,
+    .input-wrapper:focus-within .input-icon {
+      color: var(--blue);
+    }
+
+    .form-input.is-invalid {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
+    }
+
+    /* Password toggle */
+    .pw-toggle {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+      z-index: 2;
+    }
+
+    .pw-toggle:hover { color: var(--blue); }
+
+    /* Password input needs extra right padding */
+    .pw-input { padding-right: 40px; }
+
+    /* ── Submit Button ── */
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border: none;
+      border-radius: 9px;
+      color: white;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.35);
+      margin-top: 4px;
+    }
+
+    .btn-login::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background 0.2s;
+    }
+
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(59,130,246,0.5);
+    }
+
+    .btn-login:hover::before { background: rgba(255,255,255,0.06); }
+    .btn-login:active { transform: translateY(0); }
+
+    .btn-login-text { position: relative; z-index: 1; }
+
+    /* Loading state */
+    .btn-login.loading .btn-login-text { opacity: 0; }
+    .btn-login.loading::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 20px; height: 20px;
+      margin-top: -10px; margin-left: -10px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Footer ── */
+    .login-footer {
+      text-align: center;
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .login-footer a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+
+    .login-footer a:hover {
+      color: var(--cyan);
+      text-decoration: underline;
+    }
+
+    /* ── Threat intel tag strip ── */
+    .tag-strip {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+
+    .tag {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .tag-recon  { background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.25); color: #a78bfa; }
+    .tag-scan   { background: rgba(59,130,246,0.12);  border: 1px solid rgba(59,130,246,0.25);  color: #60a5fa; }
+    .tag-vuln   { background: rgba(239,68,68,0.12);   border: 1px solid rgba(239,68,68,0.25);   color: #f87171; }
+    .tag-report { background: rgba(16,185,129,0.12);  border: 1px solid rgba(16,185,129,0.25);  color: #34d399; }
   </style>
 </head>
-<body class="loading authentication-bg">
-  <div class="account-pages mt-5 mb-5">
-    <div class="container">
-      <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6 col-xl-4">
-          <div class="card">
-            <div class="card-body p-4">
-              <div class="text-center w-75 m-auto">
-                <div class="auth-logo">
-                  <a href="index.html" class="logo text-center">
-                    <span class="logo-lg">
-                      <img src="/staticfiles/img/logo-lg.png" alt="" height="90">
-                    </span>
-                  </a>
-                </div>
-                <h3 class="">Login to reNgine-ng</h3>
-                <p>Current release: v{{ RENGINE_CURRENT_VERSION }}</p>
-              </div>
-              <div class="alert alert-primary" role="alert">
-                <a href="https://github.com/Security-Tools-Alliance/rengine-ng/wiki" target="_blank">Learn how to create reNgine-ng account.</a>
-              </div>
-              {% if messages %}
-              <p class="">
-                  {% for message in messages %}
-                    <div class="alert alert-warning" role="alert">
-                      {{message}}
-                    </div>
-                  {% endfor %}
-              <span>If you have any issues or feature request, feel free to <a href="https://github.com/Security-Tools-Alliance/rengine-ng/issues" class="text-primary">raise issue on Github.</a></span>
-              </p>
-              {% endif %}
-              <form method="POST">
-                {% csrf_token %}
-                <div class="mb-3">
-                  <label for="username" class="form-label">Username</label>
-                  <div class="input-group">
-                    <span class="input-group-text" id="basic-addon1">@</span>
-                    <input id="username" name="username" type="text" class="form-control {% if form.errors %}is-invalid{% endif %}" placeholder="username" required>
-                  </div>
-                </div>
-                <div class="mb-3">
-                  <label for="password" class="form-label">Password</label>
-                  <div class="input-group input-group-merge">
-                    <input id="password" name="password" type="password" class="form-control {% if form.errors %}is-invalid{% endif %}" placeholder="Password" required>
-                    <div class="input-group-text" data-password="false">
-                      <span class="password-eye"></span>
-                    </div>
-                  </div>
-                </div>
-                {% if form.errors %}
-                <div class="col-12 text-danger">
-                    <p class="text-danger">
-                        <strong>Oops! Invalid username or password.</strong>
-                        <br>
-                        Please note, both password and username are case-sensitive.
-                    </p>
-                </div>
-                {% endif %}
-                <div class="text-center d-grid">
-                  <button class="btn btn-primary" type="submit"> Log In </button>
-                </div>
-              </form>
-            </div>
+
+<body>
+  <!-- ── Animated Background Scene ── -->
+  <div class="bg-scene">
+    <div class="bg-grid"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="scan-line"></div>
+    <!-- Particles (JS will animate) -->
+    <div class="particle" id="p1" style="left:10%; animation-duration:8s; animation-delay:0s; --drift:40px;"></div>
+    <div class="particle" id="p2" style="left:25%; animation-duration:11s; animation-delay:-2s; --drift:-25px; background:#06b6d4;"></div>
+    <div class="particle" id="p3" style="left:50%; animation-duration:9s; animation-delay:-4s; --drift:60px; background:#8b5cf6;"></div>
+    <div class="particle" id="p4" style="left:72%; animation-duration:12s; animation-delay:-1s; --drift:-40px;"></div>
+    <div class="particle" id="p5" style="left:88%; animation-duration:7s; animation-delay:-6s; --drift:20px; background:#10b981;"></div>
+    <div class="particle" id="p6" style="left:40%; animation-duration:10s; animation-delay:-3s; --drift:-30px;"></div>
+  </div>
+
+  <!-- ── Login Container ── -->
+  <div class="login-container">
+    <div class="login-card">
+
+      <!-- Logo / Header -->
+      <div class="login-header">
+        <div class="login-logo-icon">
+          <i class="fa fa-shield-halved" style="background: linear-gradient(135deg,#3b82f6,#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;"></i>
+        </div>
+        <h2 class="login-title">reNgine-ng</h2>
+        <p class="login-subtitle">Automated Reconnaissance Framework</p>
+        <span class="login-version">v{{ RENGINE_CURRENT_VERSION }}</span>
+      </div>
+
+      <!-- Capability Tags -->
+      <div class="tag-strip">
+        <span class="tag tag-recon"><i class="fa fa-search me-1"></i>Recon</span>
+        <span class="tag tag-scan"><i class="fa fa-microchip me-1"></i>Scanner</span>
+        <span class="tag tag-vuln"><i class="fa fa-bug me-1"></i>Vuln Detection</span>
+        <span class="tag tag-report"><i class="fa fa-file-lines me-1"></i>Reports</span>
+      </div>
+
+      <!-- System status -->
+      <div class="system-status">
+        <div class="status-dot"></div>
+        <span class="status-text">System Online</span>
+        <span class="status-sep">·</span>
+        <span class="status-detail">All services operational</span>
+      </div>
+
+      <!-- Messages -->
+      {% if messages %}
+        {% for message in messages %}
+          <div class="warn-alert">
+            <i class="fa fa-triangle-exclamation me-2"></i>{{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- Form errors -->
+      {% if form.errors %}
+        <div class="error-alert">
+          <i class="fa fa-circle-xmark"></i>
+          <div>
+            <strong>Authentication Failed</strong><br>
+            Invalid username or password. Both are case-sensitive.
           </div>
         </div>
+      {% endif %}
+
+      <!-- Info alert -->
+      <div class="info-alert">
+        <i class="fa fa-circle-info"></i>
+        <span>New user? <a href="https://github.com/Security-Tools-Alliance/rengine-ng/wiki" target="_blank">Read the setup guide</a> to create an account.</span>
       </div>
-    </div>
-  </div>
+
+      <!-- Login Form -->
+      <form method="POST" id="loginForm">
+        {% csrf_token %}
+
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <div class="input-wrapper">
+            <i class="fa fa-user input-icon"></i>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              class="form-input {% if form.errors %}is-invalid{% endif %}"
+              placeholder="Enter your username"
+              autocomplete="username"
+              required
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-wrapper">
+            <i class="fa fa-lock input-icon"></i>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              class="form-input pw-input {% if form.errors %}is-invalid{% endif %}"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+            >
+            <button type="button" class="pw-toggle" id="pwToggle" aria-label="Toggle password visibility">
+              <i class="fa fa-eye" id="pwIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-login" id="loginBtn">
+          <span class="btn-login-text">
+            <i class="fa fa-arrow-right-to-bracket me-2"></i>Sign In
+          </span>
+        </button>
+      </form>
+
+      <!-- Footer -->
+      <div class="login-footer">
+        <a href="https://github.com/Security-Tools-Alliance/rengine-ng/issues" target="_blank">
+          <i class="fa fa-github me-1"></i>Report an issue
+        </a>
+        &nbsp;·&nbsp;
+        <a href="https://github.com/Security-Tools-Alliance/rengine-ng" target="_blank">
+          <i class="fa fa-star me-1"></i>GitHub
+        </a>
+      </div>
+
+    </div><!-- /.login-card -->
+  </div><!-- /.login-container -->
+
+  <script>
+    // Password toggle
+    document.getElementById('pwToggle').addEventListener('click', function() {
+      const pw = document.getElementById('password');
+      const icon = document.getElementById('pwIcon');
+      if (pw.type === 'password') {
+        pw.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+      } else {
+        pw.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+      }
+    });
+
+    // Loading state on submit
+    document.getElementById('loginForm').addEventListener('submit', function() {
+      const btn = document.getElementById('loginBtn');
+      btn.classList.add('loading');
+    });
+
+    // Input focus — icon color handled via CSS sibling selector
+    // Additional: focus ring animation for inputs
+    document.querySelectorAll('.form-input').forEach(input => {
+      input.addEventListener('focus', () => {
+        input.closest('.input-wrapper').querySelector('.input-icon').style.color = '#3b82f6';
+      });
+      input.addEventListener('blur', () => {
+        input.closest('.input-wrapper').querySelector('.input-icon').style.color = '';
+      });
+    });
+  </script>
+
   <script src="{% static 'assets/js/vendor.min.js' %}"></script>
   <script src="{% static 'assets/js/app.min.js' %}"></script>
 </body>
