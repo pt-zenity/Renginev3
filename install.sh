@@ -1,663 +1,534 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# =============================================================================
+#  reNgine-ng  —  Auto Install Script for VPS
+#  Repo   : https://github.com/pt-zenity/Renginev3
+#  Target : Ubuntu 20.04 / 22.04 / 24.04  |  Debian 11 / 12
+#  Run as : root  (or a user with sudo)
+# =============================================================================
+set -euo pipefail
 
-# Import common functions
-source "$(pwd)/scripts/common_functions.sh" # Open the file if you want to know the meaning of each color
+# ─── Colour helpers ───────────────────────────────────────────────────────────
+RED='\033[0;31m';  GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+CYAN='\033[0;36m'; BOLD='\033[1m';     RESET='\033[0m'
 
-# Import GPU support script
-source "$(pwd)/scripts/gpu_support.sh"
+info()    { echo -e "${CYAN}[INFO]${RESET}  $*"; }
+success() { echo -e "${GREEN}[OK]${RESET}    $*"; }
+warn()    { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
+error()   { echo -e "${RED}[ERROR]${RESET} $*" >&2; exit 1; }
+step()    { echo -e "\n${BOLD}${CYAN}══════════════════════════════════════════${RESET}"; \
+            echo -e "${BOLD}  $*${RESET}"; \
+            echo -e "${BOLD}${CYAN}══════════════════════════════════════════${RESET}"; }
 
-# Fetch the internal and external IP address
-external_ip=$(curl -s https://ipecho.net/plain)
-
-# Get internal IPs - cross-platform approach
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS
-    internal_ips=$(ifconfig | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}')
-else
-    # Linux
-    internal_ips=$(ip -4 -br addr | awk '$2 == "UP" {print $3} /^lo/ {print $3}' | cut -d'/' -f1)
-fi
-
-formatted_ips=""
-for ip in $internal_ips; do
-    formatted_ips="${formatted_ips}https://$ip\n"
-done
-
-# Check Docker installation
-check_docker_installation() {
-  while true; do
-    log "Docker is not installed. You have two options for installation:" $COLOR_CYAN
-    log "1) Docker Desktop: A user-friendly application with a GUI, suitable for developers. It includes Docker Engine, Docker CLI, Docker Compose, and other tools." $COLOR_GREEN
-    log "2) Docker Engine: A lightweight, command-line interface suitable for servers and advanced users. It's the core of Docker without additional GUI tools." $COLOR_GREEN
-    
-    read -p "Enter your choice (1 or 2): " docker_choice
-
-    case $docker_choice in
-      1)
-        log "Please install Docker Desktop from: https://docs.docker.com/desktop/" $COLOR_YELLOW
-        break
-        ;;
-      2)
-        log "Please install Docker Engine from: https://docs.docker.com/engine/install/" $COLOR_YELLOW
-        break
-        ;;
-      *)
-        log "Invalid choice. Please choose 1 or 2." $COLOR_RED
-        ;;
-    esac
-  done
-
-  log "After installation, please restart this script." $COLOR_CYAN
-  exit 1
+# ─── Banner ───────────────────────────────────────────────────────────────────
+banner() {
+cat << 'EOF'
+  ____      _   _       _               _   _  _____ 
+ |  _ \ ___| \ | | __ _(_)_ __   ___  | \ | |/ ____|
+ | |_) / _ \  \| |/ _` | | '_ \ / _ \ |  \| | |  __ 
+ |  _ <  __/ |\  | (_| | | | | |  __/ | |\  | | |_ |
+ |_| \_\___|_| \_|\__, |_|_| |_|\___| |_| \_|\_____|
+                  |___/                               
+       Automated Reconnaissance Framework v3
+       VPS Auto-Installer — github.com/pt-zenity/Renginev3
+EOF
 }
 
-# Check Docker version and status
-check_docker() {
-  local min_version="20.10.0"
-  log "Checking Docker installation (minimum required version: $min_version)..." $COLOR_CYAN
+banner
 
-  if ! command -v docker &> /dev/null; then
-    check_docker_installation
-  fi
+# ─── Configuration — edit these or pass as env vars ──────────────────────────
+INSTALL_DIR="${INSTALL_DIR:-/opt/rengine}"
+RENGINE_VERSION="${RENGINE_VERSION:-latest}"
 
-  if ! DOCKER_ERROR=$(docker info 2>&1); then
-    echo "Docker check failed: ${DOCKER_ERROR}"
-    log "Docker is not running. Please start Docker and try again." $COLOR_RED
-    log "You can start Docker using: sudo systemctl start docker (on most Linux systems)" $COLOR_YELLOW
-    exit 1
-  fi
+# Database
+POSTGRES_DB="${POSTGRES_DB:-rengine}"
+POSTGRES_USER="${POSTGRES_USER:-rengine}"
+PGUSER="${PGUSER:-rengine}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9@#%^&*' | head -c 24)}"
+POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+POSTGRES_HOST="${POSTGRES_HOST:-db}"
 
-  local version=$(docker version --format '{{.Server.Version}}')
+# Admin credentials
+DJANGO_SUPERUSER_USERNAME="${DJANGO_SUPERUSER_USERNAME:-rengine}"
+DJANGO_SUPERUSER_EMAIL="${DJANGO_SUPERUSER_EMAIL:-admin@rengine.local}"
+DJANGO_SUPERUSER_PASSWORD="${DJANGO_SUPERUSER_PASSWORD:-$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 18)}"
 
-  if ! [[ "$(printf '%s\n' "$min_version" "$version" | sort -V | head -n1)" = "$min_version" ]]; then
-    log "Docker version $version is installed, but reNgine-ng requires version $min_version or higher." $COLOR_RED
-    log "Please upgrade Docker to continue. Visit https://docs.docker.com/engine/install/ for installation instructions." $COLOR_YELLOW
-    exit 1
-  fi
+# SSL / domain
+DOMAIN_NAME="${DOMAIN_NAME:-rengine.local}"
+AUTHORITY_NAME="${AUTHORITY_NAME:-reNgine-ng}"
+AUTHORITY_PASSWORD="${AUTHORITY_PASSWORD:-$(openssl rand -base64 12 | tr -dc 'a-zA-Z0-9' | head -c 12)}"
+COUNTRY_CODE="${COUNTRY_CODE:-US}"
+STATE="${STATE:-Georgia}"
+CITY="${CITY:-Atlanta}"
+COMPANY="${COMPANY:-reNgine-ng}"
 
-  log "Docker version $version is installed and running." $COLOR_GREEN
-  log "It's recommended to use the latest version of Docker. Check https://docs.docker.com/engine/release-notes/ for updates." $COLOR_YELLOW
-}
+# Celery / performance
+MIN_CONCURRENCY="${MIN_CONCURRENCY:-5}"
+MAX_CONCURRENCY="${MAX_CONCURRENCY:-30}"
 
-# Check Docker Compose version and set the appropriate command
-check_docker_compose() {
-  local min_version="2.2.0"
-  log "Checking Docker Compose installation (minimum required version: $min_version)..." $COLOR_CYAN
+# GPU
+GPU="${GPU:-0}"
+GPU_TYPE="${GPU_TYPE:-none}"
+DOCKER_RUNTIME="${DOCKER_RUNTIME:-none}"
 
-  if command -v docker &> /dev/null && docker compose version &> /dev/null; then
-    DOCKER_COMPOSE="docker compose"
-  elif command -v docker-compose &> /dev/null; then
-    DOCKER_COMPOSE="docker-compose"
-  else
-    if docker compose version 2>&1 | grep -q "is not a docker command"; then
-      log "Docker Compose is not installed. Please install Docker Compose v$min_version or later from https://docs.docker.com/compose/install/" $COLOR_RED
-      log "After installation, please restart this script." $COLOR_CYAN
-      exit 1
-    else
-      log "An unexpected error occurred while checking for Docker Compose. Please ensure Docker and Docker Compose are correctly installed." $COLOR_RED
-      exit 1
-    fi
-  fi
+# Port exposed by nginx proxy (default 443)
+PROXY_PORT="${PROXY_PORT:-443}"
 
-  local version=$($DOCKER_COMPOSE version --short)
-
-  if ! [[ "$(printf '%s\n' "$min_version" "$version" | sort -V | head -n1)" = "$min_version" ]]; then
-    log "Docker Compose version $version is installed, but reNgine-ng requires version $min_version or higher." $COLOR_RED
-    log "Please upgrade Docker Compose to continue. Visit https://docs.docker.com/compose/install/ for installation instructions." $COLOR_YELLOW
-    log "After upgrade, please restart this script." $COLOR_CYAN
-    exit 1
-  fi
-
-  log "Using Docker Compose command: $DOCKER_COMPOSE (version $version)" $COLOR_GREEN
-  log "It's recommended to use the latest version of Docker Compose. Check https://docs.docker.com/compose/release-notes/ for updates." $COLOR_YELLOW
-  export DOCKER_COMPOSE
-}
-
-# Generic function to install a package
-install_package() {
-  local package_name="$1"
-  log "Installing $package_name..." $COLOR_CYAN
-  if ! command -v "$package_name" &> /dev/null; then
+# ─── Detect OS ───────────────────────────────────────────────────────────────
+detect_os() {
+  if [ -f /etc/os-release ]; then
     . /etc/os-release
-    DISTRO_FAMILY="${ID_LIKE:-$ID}"
-    case "$DISTRO_FAMILY" in
-      *debian*) sudo apt update && sudo apt install -y "$package_name" ;;
-      *fedora*|*centos*|*rhel*) sudo dnf install -y "$package_name" ;;
-      *arch*) sudo pacman -Sy "$package_name" ;;
-      *suse*|*opensuse*) sudo zypper install -y "$package_name" ;;
-      *) log "Unsupported Linux distribution: $DISTRO_FAMILY. Please install $package_name manually." $COLOR_RED; return 1 ;;
-    esac
-    if [ $? -eq 0 ]; then
-      log "$package_name installed successfully!" $COLOR_GREEN
-    else
-      log "Failed to install $package_name. Please check your internet connection and try again." $COLOR_RED
-      log "If the problem persists, try installing $package_name manually." $COLOR_YELLOW
-      return 1
-    fi
+    OS_ID="$ID"
+    OS_VER="$VERSION_ID"
   else
-    log "$package_name is already installed, skipping." $COLOR_GREEN
+    error "Cannot detect OS. /etc/os-release not found."
+  fi
+
+  case "$OS_ID" in
+    ubuntu|debian) success "Detected OS: $OS_ID $OS_VER" ;;
+    *) warn "Unsupported OS: $OS_ID. Continuing anyway — may require manual fixes." ;;
+  esac
+}
+
+# ─── Ensure running as root ───────────────────────────────────────────────────
+check_root() {
+  if [ "$(id -u)" -ne 0 ]; then
+    error "Please run this script as root:\n  sudo bash $0"
   fi
 }
 
-# Install nano text editor
-install_nano() {
-  install_package "nano"
-}
-
-# Install curl for downloading files
-install_curl() {
-  install_package "curl"
-}
-
-# Install make for building projects
-install_make() {
-  install_package "make"
-}
-
-# Remove old Docker images from version 2.0.7
-remove_old_images() {
-  log "Checking for old reNgine 2.0.7 Docker containers and images..." $COLOR_CYAN
-  
-  # Stop and remove all containers
-  if docker ps -a --format '{{.Names}}' | grep -qE '^rengine-|^postgres$|^redis$'; then
-    log "Stopping existing reNgine containers..." $COLOR_YELLOW
-    if ! make down; then
-      log "Error: Failed to stop existing containers. Please stop them manually with 'make down' before continuing." $COLOR_RED
-      exit 1
-    fi
+# ─── Check minimum RAM ────────────────────────────────────────────────────────
+check_resources() {
+  local ram_kb
+  ram_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+  local ram_gb=$(( ram_kb / 1024 / 1024 ))
+  if [ "$ram_gb" -lt 4 ]; then
+    warn "System has only ~${ram_gb}GB RAM. reNgine-ng recommends ≥ 4GB (8GB+ for production)."
+    read -rp "Continue anyway? [y/N] " confirm
+    [[ "${confirm,,}" == "y" ]] || exit 1
+  else
+    success "RAM: ~${ram_gb}GB — OK"
   fi
-  
-  declare -a old_images=(
-    "rengine-celery"
-    "rengine-celery-beat"
-    "docker.pkg.github.com/yogeshojha/rengine/rengine"
-    "rengine-certs",
-    "nginx",
-    "postgres",
-    "redis"
-  )
 
-  local failed_removals=false
-  
-  for image in "${old_images[@]}"; do
-    if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^${image}$"; then
-      log "Removing old image: $image" $COLOR_YELLOW
-      if ! docker rmi -f "$image"; then
-        log "Failed to remove image: $image" $COLOR_RED
-        failed_removals=true
-      fi
-    fi
-  done
-
-  if [ "$failed_removals" = true ]; then
-    log "Error: Some old images could not be removed." $COLOR_RED
-    log "Please remove them manually using these commands:" $COLOR_RED
-    log "docker ps -a  # to check if containers are still running" $COLOR_YELLOW
-    log "docker rm -f \$(docker ps -a -q)  # to force remove all containers" $COLOR_YELLOW
-    log "docker images  # to list all images" $COLOR_YELLOW
-    log "docker rmi -f <image_id>  # to force remove specific images" $COLOR_YELLOW
-    log "Then run the installation script again." $COLOR_RED
-    exit 1
+  local disk_gb
+  disk_gb=$(df -BG / | awk 'NR==2 {gsub("G","",$4); print $4}')
+  if [ "$disk_gb" -lt 20 ]; then
+    warn "Only ${disk_gb}GB free on /. Recommend ≥ 20GB."
+  else
+    success "Disk: ${disk_gb}GB free — OK"
   fi
 }
 
-fix_volumes_permissions() {
-  local user_id=$1
-  local group_id=$1
-  
-  log "Fixing permissions for Docker volumes..." $COLOR_CYAN
-  
-  declare -a volumes=(
-    "rengine_gf_patterns"
-    "rengine_github_repos"
-    "rengine_nuclei_templates"
-    "rengine_scan_results"
-    "rengine_tool_config"
-    "rengine_wordlist"
-  )
+# ─── Update system packages ───────────────────────────────────────────────────
+update_system() {
+  step "1/8  Updating system packages"
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -qq
+  apt-get upgrade -y -qq
+  apt-get install -y -qq \
+    curl wget git unzip gnupg2 ca-certificates \
+    lsb-release apt-transport-https software-properties-common \
+    openssl net-tools ufw
+  success "System packages updated."
+}
 
-  for volume in "${volumes[@]}"; do
-    if docker volume inspect "$volume" >/dev/null 2>&1; then
-      log "Setting permissions for volume: $volume" $COLOR_YELLOW
-      if ! docker run --rm -v "$volume:/data" alpine sh -c "chown -R $user_id:$group_id /data"; then
-        log "Failed to set permissions for volume: $volume" $COLOR_RED
-        return 1
-      fi
+# ─── Install Docker ───────────────────────────────────────────────────────────
+install_docker() {
+  step "2/8  Installing Docker Engine"
+
+  if command -v docker &>/dev/null; then
+    success "Docker already installed: $(docker --version)"
+    return
+  fi
+
+  # Official Docker convenience script
+  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  sh /tmp/get-docker.sh
+  rm -f /tmp/get-docker.sh
+
+  systemctl enable docker
+  systemctl start docker
+
+  success "Docker installed: $(docker --version)"
+}
+
+# ─── Install Docker Compose ───────────────────────────────────────────────────
+install_compose() {
+  step "3/8  Installing Docker Compose v2"
+
+  if docker compose version &>/dev/null 2>&1; then
+    success "Docker Compose already installed: $(docker compose version)"
+    return
+  fi
+
+  # Docker Compose v2 via plugin
+  apt-get install -y -qq docker-compose-plugin 2>/dev/null || \
+  curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+       -o /usr/local/bin/docker-compose && \
+  chmod +x /usr/local/bin/docker-compose && \
+  ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+  success "Docker Compose: $(docker compose version 2>/dev/null || docker-compose --version)"
+}
+
+# ─── Clone / update repository ───────────────────────────────────────────────
+setup_repo() {
+  step "4/8  Setting up reNgine-ng repository"
+
+  REPO_URL="https://github.com/pt-zenity/Renginev3.git"
+
+  if [ -d "$INSTALL_DIR/.git" ]; then
+    info "Repository already exists at $INSTALL_DIR — pulling latest changes…"
+    git -C "$INSTALL_DIR" pull --ff-only
+  else
+    info "Cloning repository to $INSTALL_DIR …"
+    git clone --depth=1 "$REPO_URL" "$INSTALL_DIR"
+  fi
+
+  success "Repository ready at: $INSTALL_DIR"
+}
+
+# ─── Detect reNgine version ───────────────────────────────────────────────────
+detect_version() {
+  if [ "$RENGINE_VERSION" = "latest" ]; then
+    if [ -f "$INSTALL_DIR/web/reNgine/version.py" ]; then
+      RENGINE_VERSION=$(grep -oP "__version__\s*=\s*['\"]?\K[0-9]+\.[0-9]+\.[0-9]+" \
+        "$INSTALL_DIR/web/reNgine/version.py" 2>/dev/null || echo "3.0.0")
     else
-      log "Volume $volume not found, skipping..." $COLOR_YELLOW
+      RENGINE_VERSION="3.0.0"
     fi
+  fi
+  info "reNgine-ng version: $RENGINE_VERSION"
+}
+
+# ─── Generate .env file ───────────────────────────────────────────────────────
+generate_env() {
+  step "5/8  Generating environment configuration"
+
+  ENV_FILE="$INSTALL_DIR/.env"
+
+  # Backup existing .env
+  if [ -f "$ENV_FILE" ]; then
+    cp "$ENV_FILE" "${ENV_FILE}.bak.$(date +%Y%m%d%H%M%S)"
+    warn "Existing .env backed up."
+  fi
+
+  cat > "$ENV_FILE" << EOF
+# =============================================================
+#  reNgine-ng — Environment Configuration
+#  Generated by install.sh on $(date)
+# =============================================================
+
+COMPOSE_PROJECT_NAME=rengine
+RENGINE_VERSION=${RENGINE_VERSION}
+
+# ─── SSL / Domain ────────────────────────────────────────────
+AUTHORITY_NAME=${AUTHORITY_NAME}
+AUTHORITY_PASSWORD=${AUTHORITY_PASSWORD}
+COMPANY=${COMPANY}
+DOMAIN_NAME=${DOMAIN_NAME}
+COUNTRY_CODE=${COUNTRY_CODE}
+STATE=${STATE}
+CITY=${CITY}
+
+# ─── Database ────────────────────────────────────────────────
+POSTGRES_DB=${POSTGRES_DB}
+POSTGRES_USER=${POSTGRES_USER}
+PGUSER=${PGUSER}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+POSTGRES_PORT=${POSTGRES_PORT}
+POSTGRES_HOST=${POSTGRES_HOST}
+
+# ─── Django Superuser ────────────────────────────────────────
+DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME}
+DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL}
+DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
+
+# ─── Celery ──────────────────────────────────────────────────
+MIN_CONCURRENCY=${MIN_CONCURRENCY}
+MAX_CONCURRENCY=${MAX_CONCURRENCY}
+
+# ─── Installation ────────────────────────────────────────────
+INSTALL_TYPE=prebuilt
+
+# ─── GPU (set GPU=1 to enable) ───────────────────────────────
+GPU=${GPU}
+GPU_TYPE=${GPU_TYPE}
+DOCKER_RUNTIME=${DOCKER_RUNTIME}
+
+# ─── Ollama LLM ──────────────────────────────────────────────
+OLLAMA_INSTANCE=http://ollama:11434
+EOF
+
+  chmod 600 "$ENV_FILE"
+  success ".env file created at $ENV_FILE"
+}
+
+# ─── Generate SSL certificates ───────────────────────────────────────────────
+generate_certs() {
+  step "6/8  Generating SSL certificates"
+
+  CERTS_DIR="$INSTALL_DIR/docker/secrets/certs"
+  mkdir -p "$CERTS_DIR"
+
+  if [ -f "$CERTS_DIR/rengine.pem" ]; then
+    success "SSL certificates already exist — skipping generation."
+    return
+  fi
+
+  cd "$INSTALL_DIR/docker"
+
+  # Use docker-compose.setup.yml if it exists (official cert generator)
+  if [ -f "docker-compose.setup.yml" ]; then
+    info "Running certificate generator container…"
+    docker compose -f docker-compose.setup.yml --env-file "$INSTALL_DIR/.env" up --no-build 2>&1 | tail -5 || true
+    # Check if certs were generated
+    if [ -f "$CERTS_DIR/rengine.pem" ]; then
+      success "SSL certificates generated via Docker."
+      return
+    fi
+  fi
+
+  # Fallback: generate self-signed certs directly with openssl
+  warn "Generating self-signed certificates with openssl (fallback)…"
+  local subj="/C=${COUNTRY_CODE}/ST=${STATE}/L=${CITY}/O=${COMPANY}/CN=${DOMAIN_NAME}"
+
+  # CA key + cert
+  openssl genrsa -passout "pass:${AUTHORITY_PASSWORD}" -aes256 -out "$CERTS_DIR/ca.key" 4096 2>/dev/null
+  openssl req -new -x509 -days 3650 \
+    -passin "pass:${AUTHORITY_PASSWORD}" \
+    -key "$CERTS_DIR/ca.key" \
+    -out "$CERTS_DIR/rengine_chain.pem" \
+    -subj "$subj/CN=${AUTHORITY_NAME} CA" 2>/dev/null
+
+  # Server key + CSR
+  openssl genrsa -out "$CERTS_DIR/rengine_rsa.key" 4096 2>/dev/null
+  openssl req -new \
+    -key "$CERTS_DIR/rengine_rsa.key" \
+    -out "$CERTS_DIR/rengine.csr" \
+    -subj "$subj" 2>/dev/null
+
+  # Sign with CA
+  openssl x509 -req -days 3650 \
+    -in "$CERTS_DIR/rengine.csr" \
+    -CA "$CERTS_DIR/rengine_chain.pem" \
+    -CAkey "$CERTS_DIR/ca.key" \
+    -passin "pass:${AUTHORITY_PASSWORD}" \
+    -CAcreateserial \
+    -out "$CERTS_DIR/rengine.pem" 2>/dev/null
+
+  chmod 600 "$CERTS_DIR"/*.key "$CERTS_DIR"/*.pem 2>/dev/null || true
+  success "Self-signed SSL certificates generated."
+}
+
+# ─── Configure firewall ───────────────────────────────────────────────────────
+configure_firewall() {
+  step "7/8  Configuring UFW firewall"
+
+  if ! command -v ufw &>/dev/null; then
+    warn "ufw not found — skipping firewall configuration."
+    return
+  fi
+
+  ufw --force reset >/dev/null
+  ufw default deny incoming >/dev/null
+  ufw default allow outgoing >/dev/null
+  ufw allow ssh         comment "SSH" >/dev/null
+  ufw allow 443/tcp     comment "reNgine-ng HTTPS" >/dev/null
+  ufw allow 8082/tcp    comment "reNgine-ng HTTP redirect" >/dev/null
+  ufw --force enable >/dev/null
+
+  success "Firewall configured: SSH, 443/tcp, 8082/tcp allowed."
+}
+
+# ─── Pull images and start services ──────────────────────────────────────────
+start_services() {
+  step "8/8  Pulling Docker images and starting reNgine-ng"
+
+  cd "$INSTALL_DIR/docker"
+
+  info "Pulling Docker images (this may take 5–15 minutes)…"
+  docker compose --env-file "$INSTALL_DIR/.env" pull 2>&1 | \
+    grep -E "^(Pull|Pulling|Pulled|Error)" || true
+
+  info "Starting all services…"
+  docker compose --env-file "$INSTALL_DIR/.env" up -d
+
+  success "Docker services started."
+}
+
+# ─── Wait for web service to be healthy ──────────────────────────────────────
+wait_healthy() {
+  info "Waiting for reNgine-ng web service to become healthy…"
+  local max_wait=180
+  local waited=0
+  local interval=10
+
+  while [ $waited -lt $max_wait ]; do
+    local status
+    status=$(docker inspect --format='{{.State.Health.Status}}' rengine-web-1 2>/dev/null || echo "starting")
+    if [ "$status" = "healthy" ]; then
+      success "reNgine-ng is healthy and ready!"
+      return
+    fi
+    info "Status: ${status} — waiting ${interval}s… (${waited}/${max_wait}s)"
+    sleep $interval
+    waited=$((waited + interval))
   done
-  
-  log "Volume permissions updated successfully" $COLOR_GREEN
-  return 0
+
+  warn "Service did not become healthy within ${max_wait}s. Check logs: docker logs rengine-web-1"
 }
 
-fix_project_ownership() {
-  local user_id=$1
-  local group_id=$1
-  
-  log "Setting correct ownership of the project directory..." $COLOR_CYAN
-  project_dir=$(pwd)
-  
-  # Set ownership for both hidden and regular files in one command
-  if ! find "$project_dir" \( -name ".*" -o -true \) -exec chown ${user_id}:${group_id} {} +; then
-      log "Failed to set ownership of project directory to $user_id" $COLOR_RED
-      return 1
+# ─── Print summary ────────────────────────────────────────────────────────────
+print_summary() {
+  # Detect public IP
+  local PUBLIC_IP
+  PUBLIC_IP=$(curl -4 -s --max-time 5 https://ifconfig.me 2>/dev/null || \
+              curl -4 -s --max-time 5 https://api.ipify.org 2>/dev/null || \
+              hostname -I | awk '{print $1}')
+
+  echo ""
+  echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════╗${RESET}"
+  echo -e "${BOLD}${GREEN}║       reNgine-ng Installation Complete! 🎉       ║${RESET}"
+  echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════╝${RESET}"
+  echo ""
+  echo -e "${BOLD}  Access URL   :${RESET}  https://${PUBLIC_IP}"
+  echo -e "${BOLD}  Domain       :${RESET}  ${DOMAIN_NAME}"
+  echo -e "${BOLD}  Install Dir  :${RESET}  ${INSTALL_DIR}"
+  echo ""
+  echo -e "${BOLD}  ─── Login Credentials ──────────────────────────────${RESET}"
+  echo -e "${BOLD}  Username     :${RESET}  ${DJANGO_SUPERUSER_USERNAME}"
+  echo -e "${BOLD}  Password     :${RESET}  ${DJANGO_SUPERUSER_PASSWORD}"
+  echo ""
+  echo -e "${BOLD}  ─── Database ────────────────────────────────────────${RESET}"
+  echo -e "${BOLD}  DB User      :${RESET}  ${POSTGRES_USER}"
+  echo -e "${BOLD}  DB Password  :${RESET}  ${POSTGRES_PASSWORD}"
+  echo ""
+  echo -e "${YELLOW}  ⚠  IMPORTANT: Save these credentials now!${RESET}"
+  echo -e "${YELLOW}     They are also stored in: ${INSTALL_DIR}/.env${RESET}"
+  echo ""
+  echo -e "${BOLD}  ─── Management Commands ─────────────────────────────${RESET}"
+  echo -e "  Start    :  cd ${INSTALL_DIR}/docker && docker compose up -d"
+  echo -e "  Stop     :  cd ${INSTALL_DIR}/docker && docker compose down"
+  echo -e "  Restart  :  cd ${INSTALL_DIR}/docker && docker compose restart"
+  echo -e "  Logs     :  cd ${INSTALL_DIR}/docker && docker compose logs -f"
+  echo -e "  Update   :  cd ${INSTALL_DIR} && git pull && cd docker && docker compose pull && docker compose up -d"
+  echo ""
+  echo -e "${CYAN}  Certificate is self-signed — accept the browser warning on first visit.${RESET}"
+  echo -e "${CYAN}  To use a real domain: update DOMAIN_NAME in ${INSTALL_DIR}/.env${RESET}"
+  echo ""
+
+  # Save summary to file
+  cat > "${INSTALL_DIR}/INSTALL_SUMMARY.txt" << SUMMARY
+reNgine-ng Install Summary — $(date)
+======================================================
+Access URL   : https://${PUBLIC_IP}
+Domain       : ${DOMAIN_NAME}
+Install Dir  : ${INSTALL_DIR}
+
+Login Credentials
+  Username   : ${DJANGO_SUPERUSER_USERNAME}
+  Password   : ${DJANGO_SUPERUSER_PASSWORD}
+
+Database
+  DB User    : ${POSTGRES_USER}
+  DB Password: ${POSTGRES_PASSWORD}
+
+Management
+  Start  : cd ${INSTALL_DIR}/docker && docker compose up -d
+  Stop   : cd ${INSTALL_DIR}/docker && docker compose down
+  Logs   : cd ${INSTALL_DIR}/docker && docker compose logs -f
+SUMMARY
+  chmod 600 "${INSTALL_DIR}/INSTALL_SUMMARY.txt"
+  success "Summary saved to: ${INSTALL_DIR}/INSTALL_SUMMARY.txt"
+}
+
+# ─── Optional: interactive configuration ──────────────────────────────────────
+interactive_config() {
+  if [ "${NONINTERACTIVE:-0}" = "1" ]; then
+    return
   fi
-  
-  log "Project directory ownership set to $user_id" $COLOR_GREEN
-  return 0
-}
-# Check GPU support and install required dependencies
-check_gpu_support() {
-    log "Checking for GPU support..." $COLOR_CYAN
-    
-    # Execute GPU detection with error handling
-    if ! GPU_TYPE=$(./scripts/gpu_support.sh 2>/dev/null); then
-        log "GPU detection script failed, continuing with CPU-only setup" $COLOR_YELLOW
-        # Add default GPU configuration
-        {
-            echo "GPU=0"
-            echo "GPU_TYPE=none"
-            echo "DOCKER_RUNTIME=none"
-        } >> .env
-        return 1
-    fi
-    
-    # Validate GPU_TYPE output
-    if [[ ! "$GPU_TYPE" =~ ^(nvidia|amd|none)$ ]]; then
-        log "Invalid GPU type detected: $GPU_TYPE, continuing with CPU-only setup" $COLOR_YELLOW
-        # Add default GPU configuration
-        {
-            echo "GPU=0"
-            echo "GPU_TYPE=none"
-            echo "DOCKER_RUNTIME=none"
-        } >> .env
-        return 1
-    fi
-    
-    case $GPU_TYPE in
-        "nvidia")
-            log "NVIDIA GPU detected" $COLOR_GREEN
-            if ! command -v nvidia-container-toolkit &> /dev/null; then
-                log "Installing NVIDIA Container Toolkit..." $COLOR_CYAN
-                
-                # Add NVIDIA repository key
-                if ! curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg; then
-                    log "Failed to add NVIDIA repository key" $COLOR_RED
-                    return 1
-                fi
-                
-                # Add NVIDIA repository
-                if ! curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-                    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-                    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list > /dev/null; then
-                    log "Failed to add NVIDIA repository" $COLOR_RED
-                    return 1
-                fi
-                
-                # Update package list
-                if ! sudo apt-get update; then
-                    log "Failed to update package list" $COLOR_RED
-                    return 1
-                fi
-                
-                # Install NVIDIA Container Toolkit
-                if ! sudo apt-get install -y nvidia-container-toolkit; then
-                    log "Failed to install NVIDIA Container Toolkit" $COLOR_RED
-                    return 1
-                fi
-                
-                # Configure Docker runtime
-                if ! sudo nvidia-ctk runtime configure --runtime=docker; then
-                    log "Failed to configure Docker runtime for NVIDIA" $COLOR_RED
-                    return 1
-                fi
-                
-                # Restart Docker service
-                if ! sudo systemctl restart docker; then
-                    log "Failed to restart Docker service" $COLOR_RED
-                    return 1
-                fi
-                
-                log "NVIDIA Container Toolkit installed successfully" $COLOR_GREEN
-            fi
-            return 0
-            ;;
-            
-        "amd")
-            log "AMD GPU detected" $COLOR_GREEN
-            if ! command -v amdgpu-install &> /dev/null; then
-                log "Installing ROCm..." $COLOR_CYAN
-                
-                # Add ROCm repository key
-                if ! curl -fsSL https://repo.radeon.com/rocm/rocm.gpg.key | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/rocm.gpg; then
-                    log "Failed to add ROCm repository key" $COLOR_RED
-                    return 1
-                fi
-                
-                # Add ROCm repository
-                if ! echo "deb [arch=amd64] https://repo.radeon.com/rocm/apt/debian ubuntu main" | sudo tee /etc/apt/sources.list.d/rocm.list > /dev/null; then
-                    log "Failed to add ROCm repository" $COLOR_RED
-                    return 1
-                fi
-                
-                # Update package list
-                if ! sudo apt-get update; then
-                    log "Failed to update package list" $COLOR_RED
-                    return 1
-                fi
-                
-                # Install ROCm
-                if ! sudo apt-get install -y rocm-dev; then
-                    log "Failed to install ROCm" $COLOR_RED
-                    return 1
-                fi
-                
-                # Configure user groups
-                if ! sudo usermod -aG render $USER || ! sudo usermod -aG video $USER; then
-                    log "Failed to configure user groups" $COLOR_RED
-                    return 1
-                fi
-                
-                log "ROCm installed successfully" $COLOR_GREEN
-            fi
-            return 0
-            ;;
-            
-        *)
-            log "No supported GPU detected, continuing with CPU-only setup" $COLOR_YELLOW
-            return 1
-            ;;
-    esac
-}
 
-# Check for root privileges
-if [ $EUID -eq 0 ]; then
-  if [ "$SUDO_USER" = "root" ] || [ "$SUDO_USER" = "" ]; then
-    log "Error: Do not run this script as root user. Use 'sudo' with a non-root user." $COLOR_RED
-    log "Example: 'sudo ./install.sh'" $COLOR_RED
-    exit 1
+  echo ""
+  echo -e "${BOLD}Configuration Setup (press Enter to accept defaults)${RESET}"
+  echo ""
+
+  read -rp "  Domain name [${DOMAIN_NAME}]: " input
+  DOMAIN_NAME="${input:-$DOMAIN_NAME}"
+
+  read -rp "  Admin username [${DJANGO_SUPERUSER_USERNAME}]: " input
+  DJANGO_SUPERUSER_USERNAME="${input:-$DJANGO_SUPERUSER_USERNAME}"
+
+  read -rp "  Admin password [auto-generated, press Enter]: " input
+  if [ -n "$input" ]; then
+    DJANGO_SUPERUSER_PASSWORD="$input"
   fi
-fi
 
-# Check if the script is run with sudo
-if [ -z "$SUDO_USER" ]; then
-  log "Error: This script must be run with sudo." $COLOR_RED
-  log "Example: 'sudo ./install.sh'" $COLOR_RED
-  exit 1
-fi
+  read -rp "  Admin email [${DJANGO_SUPERUSER_EMAIL}]: " input
+  DJANGO_SUPERUSER_EMAIL="${input:-$DJANGO_SUPERUSER_EMAIL}"
 
-usageFunction()
-{
-  log "Usage: $0 (-n) (-h)" $COLOR_GREEN
-  log "\t-n Non-interactive installation (Optional)" $COLOR_GREEN
-  log "\t-h Show usage" $COLOR_GREEN
-  exit 1
+  read -rp "  Install directory [${INSTALL_DIR}]: " input
+  INSTALL_DIR="${input:-$INSTALL_DIR}"
+
+  read -rp "  Enable GPU support? (requires NVIDIA/AMD) [y/N]: " input
+  if [[ "${input,,}" == "y" ]]; then
+    GPU=1
+    GPU_TYPE="nvidia"
+    DOCKER_RUNTIME="nvidia"
+    warn "GPU enabled. Ensure nvidia-container-toolkit is installed."
+  fi
+
+  echo ""
 }
 
-# Main installation process
+# ─── Check Docker GPU runtime (optional) ──────────────────────────────────────
+setup_gpu() {
+  if [ "$GPU" != "1" ]; then
+    return
+  fi
+
+  info "Checking NVIDIA GPU support…"
+  if ! command -v nvidia-smi &>/dev/null; then
+    warn "nvidia-smi not found. Disabling GPU support."
+    GPU=0; GPU_TYPE=none; DOCKER_RUNTIME=none
+    return
+  fi
+
+  # Install nvidia-container-toolkit
+  distribution=$(. /etc/os-release; echo $ID$VERSION_ID)
+  curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+    gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+  curl -fsSL "https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list" | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
+  apt-get update -qq
+  apt-get install -y -qq nvidia-container-toolkit
+  nvidia-ctk runtime configure --runtime=docker
+  systemctl restart docker
+  success "NVIDIA container toolkit installed."
+}
+
+# ─── Main ─────────────────────────────────────────────────────────────────────
 main() {
-  cat web/art/reNgine.txt
+  echo ""
+  check_root
+  detect_os
+  check_resources
 
-  log "\r\nBefore running this script, please make sure Docker is installed and running, and you have made changes to the '.env' file." $COLOR_RED
-  log "Changing the PostgreSQL username & password in the '.env' is highly recommended.\r\n" $COLOR_RED
+  # Ask questions before doing any work
+  interactive_config
 
-  log "Please note that this installation script is only intended for Linux" $COLOR_RED
-  log "x86_64 and arm64 platform (compatible with Apple Mx series) are supported" $COLOR_RED
-
-  log "Raspberry Pi is not recommended, all install tests have failed" $COLOR_RED
-  log ""
-  tput setaf 1;
-
-  isNonInteractive=false
-  # Get args from sudo or directly
-  args="${@:-${SUDO_COMMAND#*/install.sh }}"
-  for arg in $args
-  do
-    case $arg in
-      -n|--non-interactive)
-        isNonInteractive=true
-        ;;
-      -h|--help)
-        usageFunction
-        ;;
-      ./install.sh)
-        # Skip the script name
-        ;;
-      *)
-        log "Unknown argument: $arg" $COLOR_RED
-        usageFunction
-        ;;
-    esac
-  done
-
-  log "Checking and installing reNgine-ng prerequisites..." $COLOR_CYAN
-
-  install_curl
-  install_make
-  check_docker
-  check_docker_compose
-
-  # Add GPU support check here
-  if check_gpu_support; then
-    if [ $isNonInteractive = true ]; then
-        # Load existing GPU configuration from .env
-        if [ -f .env ]; then
-            GPU_ENABLED=$(grep "^GPU=" .env | cut -d '=' -f2)
-            if [ "$GPU_ENABLED" = "1" ]; then
-                # Remove existing GPU-related configurations
-                sed -i '/^GPU=/d' .env
-                sed -i '/^GPU_TYPE=/d' .env
-                sed -i '/^DOCKER_RUNTIME=/d' .env
-                
-                # Add GPU configuration to environment
-                {
-                    echo "GPU=1"
-                    echo "GPU_TYPE=$GPU_TYPE"
-                    echo "DOCKER_RUNTIME=$GPU_TYPE"
-                } >> .env
-                log "GPU support has been enabled from existing configuration" $COLOR_GREEN
-            else
-                log "GPU support is disabled in .env" $COLOR_YELLOW
-            fi
-        fi
-    else
-        log "Do you want to enable GPU support for Ollama? (recommended for better LLM performance) [y/n] " $COLOR_CYAN
-        read -p "" gpu_choice
-        case $gpu_choice in
-            [Yy]* )
-                # Remove existing GPU-related configurations
-                sed -i '/^GPU=/d' .env
-                sed -i '/^GPU_TYPE=/d' .env
-                sed -i '/^DOCKER_RUNTIME=/d' .env
-                
-                # Add GPU configuration to environment
-                {
-                    echo "GPU=1"
-                    echo "GPU_TYPE=$GPU_TYPE"
-                    echo "DOCKER_RUNTIME=$GPU_TYPE"
-                } >> .env
-                log "GPU support will be enabled" $COLOR_GREEN
-                ;;
-            * )
-                # Remove existing GPU-related configurations
-                sed -i '/^GPU=/d' .env
-                sed -i '/^GPU_TYPE=/d' .env
-                sed -i '/^DOCKER_RUNTIME=/d' .env
-                # Add default GPU configuration
-                {
-                    echo "GPU=0"
-                    echo "GPU_TYPE=none"
-                    echo "DOCKER_RUNTIME=none"
-                } >> .env
-                log "Continuing without GPU support" $COLOR_YELLOW
-                ;;
-        esac
-    fi
-  fi
-
-  if [ $isNonInteractive = false ]; then
-    read -p "Are you sure you made changes to the '.env' file (y/n)? " answer
-    case ${answer:0:1} in
-        y|Y|yes|YES|Yes )
-          log "\nContinuing installation!\n" $COLOR_GREEN
-        ;;
-        * )
-          install_nano
-          nano .env
-        ;;
-    esac
-  fi
-
-  log "Checking and installing reNgine-ng prerequisites..." $COLOR_CYAN
-
-  install_curl
-  install_make
-  check_docker
-  check_docker_compose
-
-  # Remove old Docker images from version 2.0.7
-  remove_old_images
-
-  if [ -n "$SUDO_USER" ]; then
-    current_id=$(id -u "$SUDO_USER")
-  else
-    current_id=$(id -u)
-  fi
-
-  # Fix project directory ownership
-  if ! fix_project_ownership "$current_id"; then
-      log "Failed to fix project directory ownership" $COLOR_RED
-      exit 1
-  fi
-
-  # Fix Docker volumes permissions
-  if ! fix_volumes_permissions "$current_id"; then
-      log "Failed to fix Docker volumes permissions" $COLOR_RED
-      exit 1
-  fi
-
-  # Install type
-  if [ "$current_id" -ne 1000 ]; then
-      # If the user is not 1000, force source install because pre-built images are not compatible with user > 1000
-      INSTALL_TYPE="source"
-      log "Build has been forced because your user ID is not the same as the pre-built images. If you want to use pre-built images, your current user installing reNgine-ng must be 1000." $COLOR_RED
-  else
-      if [ "$isNonInteractive" = false ]; then
-          log "Do you want to build Docker images from source or use pre-built images (recommended)?\nThis saves significant build time but requires good download speeds for it to complete fast." $COLOR_RED
-          log "1) From source" $COLOR_YELLOW
-          log "2) Use pre-built images (default)" $COLOR_YELLOW
-          read -p "Enter your choice (1 or 2, default is 2): " choice
-
-          case $choice in
-              1)
-                  INSTALL_TYPE="source"
-                  ;;
-              2|"")
-                  INSTALL_TYPE="prebuilt"
-                  ;;
-              *)
-                  log "Invalid choice. Defaulting to pre-built images." $COLOR_RED
-                  INSTALL_TYPE="prebuilt"
-                  ;;
-          esac
-      elif [ "$isNonInteractive" = true ]; then
-        INSTALL_TYPE="${INSTALL_TYPE:-prebuilt}"
-      fi
-  fi
-
-  # Non-interactive install
-  if [ "$isNonInteractive" = true ]; then
-    # Load and verify .env file
-    if [ -f .env ]; then
-        export $(grep -v '^#' .env | xargs)
-    else
-        log "Error: .env file not found, copy/paste the .env-dist file to .env and edit it" $COLOR_RED
-        exit 1
-    fi
-
-    if [ -z "$DJANGO_SUPERUSER_USERNAME" ] || [ -z "$DJANGO_SUPERUSER_EMAIL" ] || [ -z "$DJANGO_SUPERUSER_PASSWORD" ]; then
-      log "Error: DJANGO_SUPERUSER_USERNAME, DJANGO_SUPERUSER_EMAIL, and DJANGO_SUPERUSER_PASSWORD must be set in .env for non-interactive installation" $COLOR_RED
-      exit 1
-    fi
-
-    log "Non-interactive installation parameter set. Installation begins." $COLOR_GREEN
-  fi
-
-  if [ -z "$INSTALL_TYPE" ]; then
-    log "Error: INSTALL_TYPE is not set in .env, please set it to either 'prebuilt' or 'source'" $COLOR_RED
-    exit 1
-  elif [ "$INSTALL_TYPE" != "prebuilt" ] && [ "$INSTALL_TYPE" != "source" ]; then
-    log "Error: INSTALL_TYPE must be either 'prebuilt' or 'source'" $COLOR_RED
-    exit 1
-  fi
-
-  log "Installing reNgine-ng from $INSTALL_TYPE, please be patient as the installation could take a while..." $COLOR_CYAN
-  sleep 5
-
-  log "Generating certificates..." $COLOR_CYAN
-  make certs && log "Certificates have been generated" $COLOR_GREEN || { log "Certificate generation failed!" $COLOR_RED; exit 1; }
-
-  if [ "$INSTALL_TYPE" = "source" ]; then
-    log "Building Docker images..." $COLOR_CYAN
-    make build && log "Docker images have been built" $COLOR_GREEN || { log "Docker images build failed!" $COLOR_RED; exit 1; }
-  fi
-
-  if [ "$INSTALL_TYPE" = "prebuilt" ]; then
-    log "Pulling pre-built Docker images..." $COLOR_CYAN
-    make pull && log "Docker images have been pulled" $COLOR_GREEN || { log "Docker images pull failed!" $COLOR_RED; exit 1; }
-  fi
-
-  log "Docker containers starting, please wait as starting the Celery container could take a while..." $COLOR_CYAN
-  sleep 5
-  make up && log "reNgine-ng is started!" $COLOR_GREEN || { log "reNgine-ng start failed!" $COLOR_RED; exit 1; }
-
-  # Add configuration files management
-  log "Setting up tool configurations..." $COLOR_CYAN
-  
-  config_files=(
-    "theHarvester/api-keys.yaml|docker/celery/config/the-harvester-api-keys.yaml"
-    "amass/config.ini|docker/celery/config/amass.ini"
-    "gau/config.toml|docker/celery/config/gau.toml"
-  )
-
-  for entry in "${config_files[@]}"; do
-    target="${entry%%|*}"
-    source_path="${entry#*|}"
-    target_path="/home/rengine/.config/$target"
-    
-    if [ ! -f "$target_path" ]; then
-      log "Copying $target configuration..." $COLOR_CYAN
-      docker exec -u rengine rengine-celery-1 mkdir -p "$(dirname "$target_path")"
-      docker cp "$(pwd)/$source_path" "rengine-celery-1:$target_path"
-      docker exec -u rengine rengine-celery-1 chmod 644 "$target_path"
-    else
-      log "Configuration file $target already exists, skipping..." $COLOR_YELLOW
-    fi
-  done
-
-  # Create symbolic link for theHarvester if it doesn't exist
-  docker exec -u rengine rengine-celery-1 bash -c '[ ! -L "/home/rengine/.theHarvester" ] && ln -s /home/rengine/.config/theHarvester /home/rengine/.theHarvester || true'
-
-  log "Creating an account..." $COLOR_CYAN
-  make superuser_create isNonInteractive=$isNonInteractive
-
-  log "reNgine-ng is successfully installed and started!" $COLOR_GREEN
-  log "\r\nThank you for installing reNgine-ng, happy recon!" $COLOR_GREEN
-
-  # Get domain name from .env file
-  domain_name=$(grep "^DOMAIN_NAME=" .env 2>/dev/null | cut -d'=' -f2)
-  if [ -z "$domain_name" ]; then
-    domain_name="rengine-ng.example.com"
-  fi
-  
-  log "\r\nreNgine-ng is available at: https://$domain_name/" $COLOR_GREEN
-  log "\r\n⚠️  IMPORTANT CSRF Configuration Warning:" $COLOR_YELLOW
-  log "Due to Django's CSRF protection, you MUST access reNgine-ng using the configured hostname." $COLOR_YELLOW
-  log "If you haven't configured your DNS or /etc/hosts file to point '$domain_name' to this server," $COLOR_YELLOW
-  log "you will encounter CSRF errors. Please update your configuration accordingly." $COLOR_YELLOW
+  update_system
+  install_docker
+  install_compose
+  setup_gpu
+  setup_repo
+  detect_version
+  generate_env
+  generate_certs
+  configure_firewall
+  start_services
+  wait_healthy
+  print_summary
 }
 
-# Run the main installation process
-main
+main "$@"
