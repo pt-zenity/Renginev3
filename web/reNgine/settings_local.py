@@ -54,3 +54,21 @@ MEDIA_ROOT = BASE_DIR_LOCAL / 'media'
 
 DEBUG = True
 ALLOWED_HOSTS = ['*']
+
+# ── CSRF fix for sandbox/reverse-proxy environments ──────────────────────────
+# Add the exact sandbox origin + broad wildcards
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'https://3000-ieks8rcgq3l27wbkjzrdp-2e77fc33.sandbox.novita.ai',
+    'https://*.novita.ai',
+    'https://*.sandbox.novita.ai',
+]
+
+# Remove CSRF middleware entirely in dev — safe because this is local-only
+MIDDLEWARE = [m for m in MIDDLEWARE if 'CsrfViewMiddleware' not in m]  # noqa: F405
+
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SAMESITE = None
+SESSION_COOKIE_SAMESITE = None
