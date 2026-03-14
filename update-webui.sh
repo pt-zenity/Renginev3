@@ -175,42 +175,64 @@ find_docker_container() {
     | head -1 || true
 }
 
-# ─── Find Docker Django/app container (has Python + manage.py) ───────────────
+# ─── Find Docker Django/app container (has Python + celery installed) ────────
 find_django_container() {
-  # Strategy: iterate ALL rengine containers, test for manage.py existence.
-  # We do NOT probe `python` via PATH (it may not be in $PATH inside container).
-  # Instead we check for manage.py file which is a reliable Django indicator.
-  local candidates
-  candidates=$(docker ps --format '{{.Names}}' 2>/dev/null \
+  # Strategy: find the container that actually has BOTH manage.py AND celery
+  # installed (as a Python package directory), so collectstatic will succeed.
+  # We never rely on `python` being in $PATH — we check file existence only.
+  local all_rengine
+  all_rengine=$(docker ps --format '{{.Names}}' 2>/dev/null \
     | grep -Ei "rengine" 2>/dev/null || true)
 
-  [[ -z "$candidates" ]] && { echo ""; return; }
+  [[ -z "$all_rengine" ]] && { echo ""; return; }
 
-  local cname
+  # ── Prioritise candidates: celery/worker first, then web/app, nginx last ───
+  # This ordering means the container with all Python deps (celery worker)
+  # is checked first, avoiding the nginx/static container (rengine-web-1).
+  local candidates
+  candidates=$(
+    # 1. containers whose name contains celery or worker (have all deps)
+    echo "$all_rengine" | grep -Ei "celery|worker" || true
+    # 2. containers whose name contains django, app, backend, api
+    echo "$all_rengine" | grep -Ei "django|app|backend|api" \
+      | grep -vEi "celery|worker" || true
+    # 3. remaining rengine containers (excluding known infra)
+    echo "$all_rengine" | grep -vEi "celery|worker|django|app|backend|api|nginx|redis|postgres|db-|rabbitmq|flower|mq" || true
+  )
+
+  local cname best_cname=""
+  # Pass 1: find container where celery package directory exists
   while IFS= read -r cname; do
     [[ -z "$cname" ]] && continue
-    # Test 1: check if manage.py exists in known locations
+    echo "$cname" | grep -qEi "nginx|redis|postgres|db-|rabbitmq|flower" && continue
+    # Quick check: does a celery package dir exist anywhere?
+    if docker exec "$cname" sh -c \
+      'find /usr/local/lib /usr/lib /home /venv /opt -maxdepth 6 -type d -name "celery" 2>/dev/null | grep -q .' \
+      2>/dev/null; then
+      echo "$cname"; return
+    fi
+    [[ -z "$best_cname" ]] && best_cname="$cname"
+  done <<< "$candidates"
+
+  # Pass 2: find container with manage.py (volume-mounted or built-in)
+  while IFS= read -r cname; do
+    [[ -z "$cname" ]] && continue
+    echo "$cname" | grep -qEi "nginx|redis|postgres|db-|rabbitmq|flower" && continue
     for D in /home/rengine/rengine /home/rengine/web /usr/src/app /app /rengine/web; do
       if docker exec "$cname" test -f "$D/manage.py" 2>/dev/null; then
-        echo "$cname"
-        return
+        echo "$cname"; return
       fi
     done
   done <<< "$candidates"
 
-  # Fallback: return any rengine container that is NOT nginx/redis/postgres
-  while IFS= read -r cname; do
-    [[ -z "$cname" ]] && continue
-    echo "$cname" | grep -vEi "nginx|redis|postgres|db|rabbitmq|flower" && return
-  done <<< "$candidates"
-
-  echo ""
+  # Fallback: best non-infra container
+  echo "${best_cname:-}"
 }
 
 # ─── Find Python binary inside a container ───────────────────────────────────
 find_python_in_container() {
   local cname="$1"
-  # Try common Python paths in order — handles venv, system, custom installs
+  # 1. Try well-known absolute paths (handles venv, system, custom installs)
   for py in \
     "/usr/local/bin/python3" \
     "/usr/bin/python3" \
@@ -220,13 +242,18 @@ find_python_in_container() {
     "/usr/local/bin/python" \
     "/usr/bin/python"; do
     if docker exec "$cname" test -x "$py" 2>/dev/null; then
-      echo "$py"
-      return
+      echo "$py"; return
     fi
   done
-  # Last resort: ask the container to find it
+  # 2. Try via shell PATH (works when exec shell has correct $PATH)
   local found
-  found=$(docker exec "$cname" sh -c 'command -v python3 2>/dev/null || command -v python 2>/dev/null || find /usr /home /opt -name "python3" -type f 2>/dev/null | head -1' 2>/dev/null || true)
+  found=$(docker exec "$cname" sh -c \
+    'command -v python3 2>/dev/null || command -v python 2>/dev/null' 2>/dev/null || true)
+  [[ -n "$found" ]] && { echo "$found"; return; }
+  # 3. Filesystem search (slowest, last resort)
+  found=$(docker exec "$cname" sh -c \
+    'find /usr /home /opt /venv -maxdepth 6 -name "python3" -type f 2>/dev/null | head -1' \
+    2>/dev/null || true)
   echo "${found:-}"
 }
 
@@ -436,14 +463,13 @@ if [[ "$ENV_TYPE" == "docker" ]]; then
       #   2. Set DJANGO_SETTINGS_MODULE
       #   3. Run collectstatic, show summary
       COLLECT_CMD="
-set -e
 # ── locate manage.py ──────────────────────────────────────────
 MANAGE_DIR=''
 for D in /home/rengine/rengine /home/rengine/web /usr/src/app /app /rengine/web; do
   if [ -f \"\$D/manage.py\" ]; then MANAGE_DIR=\"\$D\"; break; fi
 done
 if [ -z \"\$MANAGE_DIR\" ]; then
-  echo '[ERR] manage.py not found'; exit 1
+  echo '[ERR] manage.py not found in known locations'; exit 1
 fi
 cd \"\$MANAGE_DIR\"
 echo \"[INFO] Working dir: \$MANAGE_DIR\"
@@ -456,11 +482,36 @@ elif [ -f 'reNgine/settings.py' ]; then
 fi
 echo \"[INFO] Settings: \$DJANGO_SETTINGS_MODULE\"
 
-# ── run collectstatic ─────────────────────────────────────────
-\"$CONTAINER_PY\" manage.py collectstatic --noinput 2>&1 \\
-  | grep -E 'static file|copied|unmodified|[Ee]rror|Traceback' \\
-  | tail -5
-echo '[DONE] collectstatic finished'
+# ── patch __init__.py to stub out celery import during collectstatic ──────────
+# reNgine/__init__.py unconditionally imports celery on line 1.
+# If the container lacks celery (e.g. nginx/staticfiles container), this causes
+# ModuleNotFoundError. We temporarily neutralise the import for collectstatic.
+INIT_FILE=\"\$MANAGE_DIR/reNgine/__init__.py\"
+INIT_PATCHED=false
+if [ -f \"\$INIT_FILE\" ] && grep -q 'from .celery' \"\$INIT_FILE\"; then
+  cp \"\$INIT_FILE\" \"\${INIT_FILE}.bak_cs\"
+  # Replace the celery import line with a safe no-op
+  sed -i 's|^from .celery import.*|# celery import stubbed by update-webui.sh for collectstatic|' \"\$INIT_FILE\"
+  INIT_PATCHED=true
+  echo '[INFO] Patched reNgine/__init__.py to skip celery import'
+fi
+
+# ── run collectstatic — capture exit code independent of the grep pipe ────────
+TMPOUT=\$(\"$CONTAINER_PY\" manage.py collectstatic --noinput 2>&1)
+CS_EXIT=\$?
+
+# ── restore __init__.py immediately ──────────────────────────────────────────
+if \$INIT_PATCHED; then
+  mv \"\${INIT_FILE}.bak_cs\" \"\$INIT_FILE\"
+  echo '[INFO] Restored reNgine/__init__.py'
+fi
+
+echo \"\$TMPOUT\" | grep -E 'static file|copied|unmodified|[Ee]rror|Traceback' | tail -8 || true
+if [ \$CS_EXIT -ne 0 ]; then
+  echo \"[ERR] collectstatic exited with code \$CS_EXIT\"
+  exit 1
+fi
+echo '[DONE] collectstatic finished successfully'
 "
       if docker exec "$DJANGO_CTR" sh -c "$COLLECT_CMD"; then
         success "collectstatic done inside $DJANGO_CTR"
