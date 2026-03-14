@@ -167,6 +167,15 @@ detect_env() {
   fi
 }
 
+# ─── Find Docker web container name ──────────────────────────────────────────
+find_docker_container() {
+  # Returns the name of the running rengine web container.
+  # Matches: rengine-web-1, rengine_web_1, rengine-web, rengine-django, etc.
+  docker ps --format '{{.Names}}' 2>/dev/null \
+    | grep -Ei "(rengine.*(web|django|app)|web.*rengine|rengine-web)" \
+    | head -1 || true
+}
+
 # ─── Find Python interpreter ──────────────────────────────────────────────────
 find_python() {
   local web_dir="$1"
@@ -328,26 +337,71 @@ fi
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  STEP 3 — collectstatic
+#  Docker env  → run INSIDE the container (all Python deps live there)
+#  Non-Docker  → run on host with detected Python
 # ══════════════════════════════════════════════════════════════════════════════
 step "3/5  Running collectstatic"
 
-if [[ -z "$DJANGO_SETTINGS" ]]; then
-  warn "Django settings not found — skipping collectstatic"
-  warn "Run manually: cd $WEB_DIR && python3 manage.py collectstatic --noinput"
-else
-  cd "$WEB_DIR"
-  info "Running collectstatic…"
-
-  STATIC_OUT=$(
-    DJANGO_SETTINGS_MODULE="$DJANGO_SETTINGS" \
-    "$PYTHON" manage.py collectstatic --noinput 2>&1
-  ) && {
-    SUMMARY=$(echo "$STATIC_OUT" | grep -E "static file|copied|unmodified" | tail -1 || true)
-    success "collectstatic done${SUMMARY:+ — $SUMMARY}"
+run_collectstatic() {
+  local out
+  out=$("$@" 2>&1) && {
+    local summary
+    summary=$(echo "$out" | grep -E "static file|copied|unmodified" | tail -1 || true)
+    success "collectstatic done${summary:+ — $summary}"
+    return 0
   } || {
     warn "collectstatic error (non-fatal):"
-    echo "$STATIC_OUT" | tail -8 | sed 's/^/    /'
+    echo "$out" | tail -10 | sed 's/^/    /'
+    return 1
   }
+}
+
+if [[ "$ENV_TYPE" == "docker" ]]; then
+  # ── Docker: execute collectstatic inside the web container ──────────────────
+  # NOTE: manage.py imports from reNgine.settings which triggers celery.py → needs
+  #       celery installed, so collectstatic MUST run inside the container.
+  DOCKER_CONTAINER="$(find_docker_container)"
+  if [[ -z "$DOCKER_CONTAINER" ]]; then
+    warn "Docker container not found — skipping collectstatic"
+    warn "Run manually: docker exec <container> python manage.py collectstatic --noinput"
+  else
+    info "Running collectstatic inside container: $DOCKER_CONTAINER"
+
+    # Build a one-liner that:
+    #   1. Finds manage.py (tries /usr/src/app then cwd)
+    #   2. Runs collectstatic with DJANGO_SETTINGS_MODULE set
+    #   3. Captures last 3 lines of output for logging
+    COLLECT_CMD='set -e
+# locate manage.py
+for D in /usr/src/app /app /home/rengine/web /rengine/web; do
+  [ -f "$D/manage.py" ] && { cd "$D"; break; }
+done
+[ -f manage.py ] || { echo "[ERR] manage.py not found"; exit 1; }
+# prefer reNgine.settings (has all deps) inside container
+export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-reNgine.settings}"
+python manage.py collectstatic --noinput 2>&1 | tee /tmp/_cs_out.txt
+grep -E "static file|copied|unmodified" /tmp/_cs_out.txt | tail -1 || true'
+
+    if docker exec "$DOCKER_CONTAINER" sh -c "$COLLECT_CMD"; then
+      success "collectstatic done inside $DOCKER_CONTAINER"
+    else
+      warn "collectstatic failed inside container — templates updated but static may be stale"
+      warn "Manual fix: docker exec $DOCKER_CONTAINER python manage.py collectstatic --noinput"
+    fi
+  fi
+
+elif [[ -z "$DJANGO_SETTINGS" ]]; then
+  # ── No settings found ────────────────────────────────────────────────────────
+  warn "Django settings not found — skipping collectstatic"
+  warn "Run manually: cd $WEB_DIR && python3 manage.py collectstatic --noinput"
+
+else
+  # ── Host Python (PM2 / bare-metal / dev) ─────────────────────────────────────
+  cd "$WEB_DIR"
+  info "Running collectstatic on host…"
+  run_collectstatic \
+    env DJANGO_SETTINGS_MODULE="$DJANGO_SETTINGS" \
+    "$PYTHON" manage.py collectstatic --noinput
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -388,25 +442,31 @@ else
 
     # ── Docker ──────────────────────────────────────────────────────────────
     docker)
-      CONTAINER=$(docker ps --format '{{.Names}}' 2>/dev/null \
-        | grep -E "rengine.*(web|django|app)|web.*rengine" | head -1 || true)
+      CONTAINER="$(find_docker_container)"
 
       if [[ -n "$CONTAINER" ]]; then
         info "Restarting container: $CONTAINER"
-        docker restart "$CONTAINER"
-        success "Container '$CONTAINER' restarted"
+        docker restart "$CONTAINER" \
+          && success "Container '$CONTAINER' restarted" \
+          || warn "docker restart failed — try: docker restart $CONTAINER"
       else
-        warn "Web container not found — trying docker-compose…"
+        # Fallback: try docker-compose / docker compose
+        info "No single container found — trying docker-compose…"
+        COMPOSE_TRIED=false
         for COMPOSE_FILE in \
           "$INSTALL_DIR/docker/docker-compose.yml" \
           "$INSTALL_DIR/docker-compose.yml" \
-          "docker-compose.yml"; do
+          "$(pwd)/docker-compose.yml"; do
           if [[ -f "$COMPOSE_FILE" ]]; then
-            docker-compose -f "$COMPOSE_FILE" restart web 2>/dev/null \
-              && success "docker-compose web restarted" && break \
-              || warn "docker-compose restart failed"
+            COMPOSE_TRIED=true
+            (docker compose -f "$COMPOSE_FILE" restart web 2>/dev/null \
+              || docker-compose -f "$COMPOSE_FILE" restart web 2>/dev/null) \
+              && { success "docker-compose web restarted via $COMPOSE_FILE"; break; } \
+              || warn "docker-compose restart failed for $COMPOSE_FILE"
           fi
         done
+        [[ "$COMPOSE_TRIED" == false ]] && \
+          warn "No compose file found — restart the web container manually"
       fi
       ;;
 
