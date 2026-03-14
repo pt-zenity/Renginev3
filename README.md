@@ -1,127 +1,169 @@
-<p align="center">
-<img src=".github/images/banner-rengine-ng.png" alt=""/>
-</p>
+# reNgine-ng 3.0.0
 
-<p align="center"><a href="https://github.com/Security-Tools-Alliance/rengine-ng/releases" target="_blank"><img src="https://img.shields.io/github/v/release/Security-Tools-Alliance/rengine-ng" alt="reNgine-ng Latest Version" /></a>&nbsp;<a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank"><img src="https://img.shields.io/badge/License-GPLv3-red.svg?&logo=none" alt="License" /></a>&nbsp;<a href="#" target="_blank"><img src="https://img.shields.io/badge/first--timers--only-friendly-blue.svg?&logo=none" alt="" /></a>&nbsp;</p>
+## Project Overview
+- **Name**: reNgine-ng (Next Generation)
+- **Version**: 3.0.0
+- **Goal**: Automated web application reconnaissance suite for security professionals, penetration testers, and bug bounty hunters.
+- **Platform**: Docker-based (requires Docker + Docker Compose)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Cycom-2024-blue.svg?logo=none" alt="" /></a>
-  <a href="https://www.youtube.com/watch?v=Xk_YH83IQgg" target="_blank"><img src="https://img.shields.io/badge/BlackHat--Arsenal--Asia-2023-blue.svg?logo=none" alt="" /></a>&nbsp;
-  <a href="https://www.youtube.com/watch?v=Xk_YH83IQgg" target="_blank"><img src="https://img.shields.io/badge/BlackHat--Arsenal--USA-2022-blue.svg?logo=none" alt="" /></a>&nbsp;
-  <a href="https://www.youtube.com/watch?v=Xk_YH83IQgg" target="_blank"><img src="https://img.shields.io/badge/Open--Source--Summit-2022-blue.svg?logo=none" alt="" /></a>&nbsp;
-  <a href="https://cyberweek.ae/2021/hitb-armory/" target="_blank"><img src="https://img.shields.io/badge/HITB--Armory-2021-blue.svg?logo=none" alt="" /></a>&nbsp;
-  <a href="https://www.youtube.com/watch?v=7uvP6MaQOX0" target="_blank"><img src="https://img.shields.io/badge/BlackHat--Arsenal--USA-2021-blue.svg?logo=none" alt="" /></a>&nbsp;
-  <a href="https://drive.google.com/file/d/1Bh8lbf-Dztt5ViHJVACyrXMiglyICPQ2/view?usp=sharing" target="_blank"><img src="https://img.shields.io/badge/Defcon--Demolabs--29-2021-blue.svg?logo=none" alt="" /></a>&nbsp;
-  <a href="https://www.youtube.com/watch?v=A1oNOIc0h5A" target="_blank"><img src="https://img.shields.io/badge/BlackHat--Arsenal--Europe-2020-blue.svg?&logo=none" alt="" /></a>&nbsp;
-</p>
+## Architecture
 
-<p align="center">
-<a href="https://github.com/Security-Tools-Alliance/rengine-ng/actions/workflows/codeql-analysis.yml" target="_blank"><img src="https://github.com/Security-Tools-Alliance/rengine-ng/actions/workflows/codeql-analysis.yml/badge.svg" alt="" /></a>&nbsp;<a href="https://github.com/Security-Tools-Alliance/rengine-ng/actions/workflows/build.yml" target="_blank"><img src="https://github.com/Security-Tools-Alliance/rengine-ng/actions/workflows/build.yml/badge.svg" alt="" /></a>&nbsp;
-</p>
+reNgine-ng uses a multi-container Docker architecture:
 
-<p align="center">
-<a href="https://discord.gg/KE5QGTqJpS" target="_blank"><img src="https://img.shields.io/discord/1227920361564143766" alt="" /></a>&nbsp;
-</p>
+| Service | Image | Role |
+|---------|-------|------|
+| `web` | Python 3.13 Alpine | Django/Daphne ASGI web server |
+| `db` | PostgreSQL 17 (with PG12 migration support) | Database |
+| `redis` | Redis 7.4 | Message broker & cache |
+| `celery` | Debian Bookworm | Celery workers + all security tools |
+| `celery-beat` | Debian Bookworm | Celery scheduler |
+| `proxy` | Nginx 1.27 Alpine | HTTPS reverse proxy |
+| `ollama` | Ollama 0.3.6 | Local LLM for AI-powered analysis |
 
-<p align="center">
-<a href="https://opensourcesecurityindex.io/" target="_blank" rel="noopener">
-<img style="width: 282px; height: 56px" src="https://opensourcesecurityindex.io/badge.svg" alt="Open Source Security Index - Fastest Growing Open Source Security Projects" width="282" height="56" /> </a>
-</p>
+## Quick Installation (Linux)
 
-# reNgine-ng (Next Generation)
+```bash
+# 1. Clone or extract the project
+cd /home/user/webapp
 
-## Why reNgine-ng?
+# 2. Copy environment config
+cp .env-dist .env
 
-reNgine-ng is a (detached) fork of [reNgine](https://github.com/yogeshojha/rengine).
+# 3. Edit .env with your settings (optional)
+nano .env
 
-## What is reNgine-ng?
+# 4. Generate SSL certificates
+make certs
 
-reNgine-ng is your go-to web application reconnaissance suite that's designed to simplify and streamline the reconnaissance process for security professionals, penetration testers, and bug bounty hunters. With its highly configurable engines, data correlation capabilities, continuous monitoring, database-backed reconnaissance data, and an intuitive user interface, reNgine-ng redefines how you gather critical information about your target web applications.
+# 5. Pull and start all services
+make up
 
-Traditional reconnaissance tools often fall short in terms of configurability and efficiency. reNgine-ng addresses these shortcomings and emerges as a excellent alternative to existing commercial tools.
+# 6. Create superuser (optional, default credentials in .env)
+make superuser_create
+```
 
-reNgine-ng was created to address the limitations of traditional reconnaissance tools and provide a better alternative, even surpassing some commercial offerings. Whether you're a bug bounty hunter, a penetration tester, or a corporate security team, reNgine-ng is your go-to solution for automating and enhancing your information-gathering efforts.
+**Access the application**: `https://localhost` (after `make up`)
 
-reNgine-ng 2.0 is out now, you can [watch reNgine-ng 2.0 release trailer here!](https://youtu.be/VwkOWqiWW5g)
+**Default credentials** (set in `.env`):
+- Username: `rengine`
+- Password: `Sm7IJG.IfHAFw9snSKv`
 
-reNgine-ng 2.0 would not have been possible without [@ocervell](https://github.com/ocervell) valuable contributions. [@ocervell](https://github.com/ocervell) did majority of the refactoring if not all and also added a ton of features. Together, we wish to shape the future of web application reconnaissance, and it's developers like [@ocervell](https://github.com/ocervell) and a [ton of other developers and hackers from our community](https://github.com/Security-Tools-Alliance/rengine-ng/graphs/contributors) who inspire and drive us forward.
+## Build from Source (for development)
 
-Thank you, [@ocervell](https://github.com/ocervell), for your outstanding work and unwavering commitment to reNgine-ng.
+```bash
+# Build Docker images locally
+make build
 
-Checkout our contributors here: [Contributors](https://github.com/Security-Tools-Alliance/rengine-ng/graphs/contributors)
+# Start all services
+make up
 
-![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
+# Or build and start in one step
+make build_up
+```
 
-### Documentation
+## Development Mode
 
-You can find detailed documentation in the repository [Wiki](https://github.com/Security-Tools-Alliance/rengine-ng/wiki)
+```bash
+make dev_up
+```
 
-![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
+This enables:
+- Hot reload for Python files
+- Remote debugging (port 5678 for web, 5679 for celery)
+- Celery Flower dashboard on port 5555
 
-### Table of Contents
+## Data Architecture
+- **Database**: PostgreSQL 17 (with auto-migration from PostgreSQL 12)
+- **Storage**: Named Docker volumes
+  - `rengine_postgres_data` - Database data
+  - `rengine_scan_results` - Scan output files
+  - `rengine_nuclei_templates` - Nuclei templates
+  - `rengine_tool_config` - Tool configurations
+  - `rengine_wordlist` - Wordlists
+  - `rengine_gf_patterns` - GF patterns
+  - `rengine_github_repos` - GitHub repos
+  - `rengine_ollama_data` - Ollama LLM data
 
-- [reNgine-ng (Next Generation)](#rengine-ng-next-generation)
-  - [Why reNgine-ng?](#why-rengine-ng)
-  - [What is reNgine-ng?](#what-is-rengine-ng)
-    - [Documentation](#documentation)
-    - [Table of Contents](#table-of-contents)
-    - [Workflow](#workflow)
-    - [Quick Installation](#quick-installation)
-    - [Platform Support](#platform-support)
-    - [Updating](#updating)
-    - [Changelog](#changelog)
-    - [Screenshots](#screenshots)
-      - [Dashboard](#dashboard)
-    - [Contributing](#contributing)
+## Security Tools Included (in celery container)
+- **Subdomain**: subfinder, amass, sublist3r, ctfr, oneforall
+- **HTTP Probing**: httpx, httprobe
+- **Crawlers**: katana, gospider, hakrawler, waybackurls
+- **Fuzzing**: ffuf, dirsearch
+- **Vulnerability**: nuclei, dalfox (XSS), naabu (port scan)
+- **Screenshots**: EyeWitness
+- **OSINT**: theHarvester, infoga, GooFuzz
+- **Other**: gf, unfurl, tlsx, crlfuzz, s3scanner, CMSeeK
 
-![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
+## Ports
+- **443** - HTTPS (main application)
+- **8082** - HTTP (redirects to HTTPS)
+- **8000** - Web server (internal, dev only: `127.0.0.1:8000`)
+- **5432** - PostgreSQL (dev only: `127.0.0.1:5432`)
+- **6379** - Redis (dev only: `127.0.0.1:6379`)
+- **11434** - Ollama (dev only: `127.0.0.1:11434`)
 
-### Workflow
+## Useful Commands
 
-<img src=".github/images/workflow.png">
+```bash
+make up           # Start all services
+make down         # Stop and remove containers
+make stop         # Stop all services (keep containers)
+make restart      # Restart all services
+make logs         # Tail all container logs
+make migrate      # Run Django migrations
+make prune        # Remove everything (containers, images, volumes)
+make help         # Show all available commands
+```
 
-![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
+## Fixes Applied (v3.0.0)
 
-### Quick Installation
+The following bugs were identified and fixed in this setup:
 
-Detailed installation instructions can be found in the [install section of the wiki](https://github.com/Security-Tools-Alliance/rengine-ng/wiki/Installation#-quick-installation)
+1. **Poetry syntax error** (`poetry run -C` → `poetry -C ... run`):
+   - `docker/web/entrypoint.sh`
+   - `docker/web/entrypoint-dev.sh`
+   - `docker/celery/entrypoint.sh`
+   - `docker/celery/entrypoint-dev.sh`
+   - `docker/beat/entrypoint.sh`
 
-### Platform Support
+2. **Celery base image** (`debian:13` → `debian:bookworm`):
+   - `debian:13` (Trixie) is unstable; `bookworm` (stable) is used instead
 
-reNgine-ng supports both **Linux** and **macOS** systems:
+3. **Shell permission error** (`/bin/false` → `/bin/bash`):
+   - `docker/celery/Dockerfile`: user shell was `/bin/false`, preventing script execution
 
-* **Linux**: Full feature support including GPU acceleration for LLM features
-* **macOS**: Full feature support with automatic macOS-specific optimizations
-  * Compatible with Intel and Apple Silicon Macs
-  * Docker Desktop integration with proper permission handling
-  * GPU acceleration not available (containers can't access Apple Silicon GPUs)
+4. **Missing entrypoint chmod**:
+   - `docker/web/Dockerfile`: Added `chmod +x /entrypoint.sh` and proper root COPY
+   - `docker/celery/Dockerfile`: Added `chmod +x /entrypoint.sh`
 
-**macOS-specific notes:**
+5. **Email format** in `.env`:
+   - `DJANGO_SUPERUSER_EMAIL=<rengine@example.com>` → `DJANGO_SUPERUSER_EMAIL=rengine@example.com`
 
-* Ensure Docker Desktop is running before using `make` commands
-* GPU flags (`GPU=1`) are safely ignored on macOS
-* File permissions are automatically handled by Docker Desktop
+6. **Missing secrets directory**:
+   - Created `docker/secrets/certs/` directory required for SSL certificates
 
-### Updating
+## Environment Variables (.env)
 
-Detailed update instructions can be found in the [update section of the wiki](https://github.com/Security-Tools-Alliance/rengine-ng/wiki/Installation#-quick-installation)
+Key settings in `.env`:
 
-### Changelog
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POSTGRES_PASSWORD` | `hE2a5@K&9nEY1fzgA6X` | DB password |
+| `DJANGO_SUPERUSER_USERNAME` | `rengine` | Admin username |
+| `DJANGO_SUPERUSER_PASSWORD` | `Sm7IJG.IfHAFw9snSKv` | Admin password |
+| `DOMAIN_NAME` | `rengine-ng.example.com` | SSL domain |
+| `MIN_CONCURRENCY` | `5` | Min parallel scans |
+| `MAX_CONCURRENCY` | `30` | Max parallel scans |
+| `GPU` | `0` | Enable GPU for Ollama |
 
-[Please find the latest release notes and changelog here.](https://github.com/Security-Tools-Alliance/rengine-ng/wiki/changelog/)
+## System Requirements
+- **OS**: Linux (recommended) or macOS
+- **Docker**: >= 20.10.0
+- **Docker Compose**: >= 2.2.0
+- **RAM**: >= 8GB recommended
+- **Disk**: >= 20GB free space (for all tools and scan data)
 
-![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)  
-
-### Screenshots
-
-#### Dashboard
-
-![](.github/screenshots/scan_results.gif)
-
-![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
-
-### Contributing
-
-See the [Contributing Guide](CONTRIBUTING.md) to get started.
-
-![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
+## Deployment Status
+- **Platform**: Docker Compose (self-hosted)
+- **Tech Stack**: Django 5.2 + Celery 5.5 + PostgreSQL 17 + Redis 7.4 + Nginx
+- **Last Updated**: 2026-03-14
