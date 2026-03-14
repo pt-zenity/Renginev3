@@ -397,7 +397,94 @@
   }
 
   /* ══════════════════════════════════════════════
-     MOBILE SUBMENU TOGGLE (existing custom.css depends on this)
+     MOBILE NAV DRAWER
+     Handles: body scroll lock, overlay click-to-close,
+     hamburger ↔ X animation, swipe-down to close
+  ══════════════════════════════════════════════ */
+  function initMobileNav() {
+    const mobileMenu = document.getElementById('mobileNavMenu');
+    const hamburger  = document.getElementById('mobileHamburger');
+    if (!mobileMenu) return;
+
+    /* ── Scroll-lock helpers ───────────────────────────────── */
+    let _scrollY = 0;
+
+    function lockBody() {
+      _scrollY = window.scrollY;
+      document.body.style.top = `-${_scrollY}px`;
+      document.body.classList.add('mobile-nav-open');
+    }
+
+    function unlockBody() {
+      document.body.classList.remove('mobile-nav-open');
+      document.body.style.top = '';
+      window.scrollTo({ top: _scrollY, behavior: 'instant' });
+    }
+
+    /* ── Bootstrap collapse events ─────────────────────────── */
+    mobileMenu.addEventListener('show.bs.collapse',  lockBody);
+    mobileMenu.addEventListener('hide.bs.collapse',  unlockBody);
+    mobileMenu.addEventListener('hidden.bs.collapse', () => {
+      // Reset hamburger aria state in case Bootstrap missed it
+      if (hamburger) hamburger.setAttribute('aria-expanded', 'false');
+    });
+
+    /* ── Click on overlay (body::after) closes drawer ─────── */
+    document.addEventListener('click', function(e) {
+      if (!document.body.classList.contains('mobile-nav-open')) return;
+      // If click is outside the navbar-custom (where menu lives), close
+      const navbar = document.querySelector('.navbar-custom');
+      const drawer = mobileMenu;
+      if (!navbar) return;
+      if (!navbar.contains(e.target) && !drawer.contains(e.target)) {
+        if (window.bootstrap && window.bootstrap.Collapse) {
+          const bsCollapse = window.bootstrap.Collapse.getInstance(mobileMenu);
+          if (bsCollapse) bsCollapse.hide();
+        }
+      }
+    });
+
+    /* ── Close on Escape key ────────────────────────────────── */
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && document.body.classList.contains('mobile-nav-open')) {
+        if (window.bootstrap && window.bootstrap.Collapse) {
+          const bsCollapse = window.bootstrap.Collapse.getInstance(mobileMenu);
+          if (bsCollapse) bsCollapse.hide();
+        }
+      }
+    });
+
+    /* ── Auto-close drawer when a nav link is clicked ─────── */
+    mobileMenu.querySelectorAll('.mobile-nav-link:not(.mobile-nav-toggle), .mobile-nav-sublink, .mobile-nav-extra-btn').forEach(function(el) {
+      el.addEventListener('click', function() {
+        // Small delay so the click registers before hiding
+        setTimeout(function() {
+          if (window.bootstrap && window.bootstrap.Collapse) {
+            const bsCollapse = window.bootstrap.Collapse.getInstance(mobileMenu);
+            if (bsCollapse) bsCollapse.hide();
+          }
+        }, 120);
+      });
+    });
+
+    /* ── Touch swipe-down to close ──────────────────────────── */
+    let touchStartY = 0;
+    mobileMenu.addEventListener('touchstart', function(e) {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    mobileMenu.addEventListener('touchend', function(e) {
+      const diff = e.changedTouches[0].clientY - touchStartY;
+      if (diff > 60) { // swiped down 60px
+        if (window.bootstrap && window.bootstrap.Collapse) {
+          const bsCollapse = window.bootstrap.Collapse.getInstance(mobileMenu);
+          if (bsCollapse) bsCollapse.hide();
+        }
+      }
+    }, { passive: true });
+  }
+
+  /* ══════════════════════════════════════════════
+     MOBILE SUBMENU TOGGLE (legacy — kept for compat)
   ══════════════════════════════════════════════ */
   function initMobileSubmenu() {
     document.querySelectorAll('.mobile-submenu-header').forEach(header => {
@@ -463,6 +550,7 @@
     patchSnackbar();
     initNavbarScroll();
     initKeyboardShortcuts();
+    initMobileNav();
     initMobileSubmenu();
 
     // DOM-ready tasks
