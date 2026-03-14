@@ -280,19 +280,7 @@
       </script>
     {% endif %}
 
-    <!-- Mobile nav: lock/unlock body scroll when drawer opens/closes -->
-    <script defer>
-      document.addEventListener('DOMContentLoaded', function () {
-        var mobileMenu = document.getElementById('mobileNavMenu');
-        if (!mobileMenu) return;
-        mobileMenu.addEventListener('show.bs.collapse', function () {
-          document.body.classList.add('mobile-nav-open');
-        });
-        mobileMenu.addEventListener('hide.bs.collapse', function () {
-          document.body.classList.remove('mobile-nav-open');
-        });
-      });
-    </script>
+    <!-- Mobile nav scroll-lock is handled in rengine-pro.js (initMobileNav) -->
 
     {% block page_level_script %}{% endblock page_level_script %}
   </body>
