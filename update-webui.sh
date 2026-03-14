@@ -170,37 +170,64 @@ detect_env() {
 # ─── Find Docker web container name (for restart only) ───────────────────────
 find_docker_container() {
   # Returns the name of the running rengine web/nginx container (for restart).
-  # Matches: rengine-web-1, rengine_web_1, rengine-web, rengine-django, etc.
   docker ps --format '{{.Names}}' 2>/dev/null \
-    | grep -Ei "(rengine.*(web|django|app|nginx)|web.*rengine|rengine-web)" \
+    | grep -Ei "(rengine.*(web|nginx)|rengine-web)" \
     | head -1 || true
 }
 
-# ─── Find Docker Django/app container (has Python + celery) ──────────────────
+# ─── Find Docker Django/app container (has Python + manage.py) ───────────────
 find_django_container() {
-  # Strategy: iterate all rengine containers and test if celery is importable.
-  # Returns the first container where `python -c "import celery"` succeeds.
+  # Strategy: iterate ALL rengine containers, test for manage.py existence.
+  # We do NOT probe `python` via PATH (it may not be in $PATH inside container).
+  # Instead we check for manage.py file which is a reliable Django indicator.
   local candidates
   candidates=$(docker ps --format '{{.Names}}' 2>/dev/null \
-    | grep -Ei "rengine" || true)
+    | grep -Ei "rengine" 2>/dev/null || true)
 
   [[ -z "$candidates" ]] && { echo ""; return; }
 
+  local cname
   while IFS= read -r cname; do
-    # Quick test: can this container import celery?
-    if docker exec "$cname" python -c "import celery" 2>/dev/null; then
-      echo "$cname"
-      return
-    fi
-    # Also try python3
-    if docker exec "$cname" python3 -c "import celery" 2>/dev/null; then
-      echo "$cname"
-      return
-    fi
+    [[ -z "$cname" ]] && continue
+    # Test 1: check if manage.py exists in known locations
+    for D in /home/rengine/rengine /home/rengine/web /usr/src/app /app /rengine/web; do
+      if docker exec "$cname" test -f "$D/manage.py" 2>/dev/null; then
+        echo "$cname"
+        return
+      fi
+    done
   done <<< "$candidates"
 
-  # No container has celery — return empty
+  # Fallback: return any rengine container that is NOT nginx/redis/postgres
+  while IFS= read -r cname; do
+    [[ -z "$cname" ]] && continue
+    echo "$cname" | grep -vEi "nginx|redis|postgres|db|rabbitmq|flower" && return
+  done <<< "$candidates"
+
   echo ""
+}
+
+# ─── Find Python binary inside a container ───────────────────────────────────
+find_python_in_container() {
+  local cname="$1"
+  # Try common Python paths in order — handles venv, system, custom installs
+  for py in \
+    "/usr/local/bin/python3" \
+    "/usr/bin/python3" \
+    "/home/rengine/.venv/bin/python3" \
+    "/venv/bin/python3" \
+    "/opt/venv/bin/python3" \
+    "/usr/local/bin/python" \
+    "/usr/bin/python"; do
+    if docker exec "$cname" test -x "$py" 2>/dev/null; then
+      echo "$py"
+      return
+    fi
+  done
+  # Last resort: ask the container to find it
+  local found
+  found=$(docker exec "$cname" sh -c 'command -v python3 2>/dev/null || command -v python 2>/dev/null || find /usr /home /opt -name "python3" -type f 2>/dev/null | head -1' 2>/dev/null || true)
+  echo "${found:-}"
 }
 
 # ─── Find Python interpreter ──────────────────────────────────────────────────
@@ -384,64 +411,63 @@ run_collectstatic() {
 }
 
 if [[ "$ENV_TYPE" == "docker" ]]; then
-  # ── Docker: MUST run inside the container that has Python + all deps ─────────
-  # reNgine's manage.py imports settings → __init__.py → celery.py → celery pkg.
-  # The "web" container is often nginx (no Python). We probe all rengine
-  # containers and use the first one where `import celery` succeeds.
-
-  info "Probing rengine containers for Python/celery…"
+  # ── Docker: find the container that has manage.py, then run collectstatic ────
+  info "Scanning rengine containers for manage.py…"
   DJANGO_CTR="$(find_django_container)"
 
   if [[ -z "$DJANGO_CTR" ]]; then
-    warn "No container with celery found — skipping collectstatic (non-fatal)"
-    warn "Static files already present; templates update is complete."
-    warn "To run manually:  docker exec <django-container> python manage.py collectstatic --noinput"
+    warn "No Django container found — skipping collectstatic (non-fatal)"
+    warn "Templates & static CSS/JS are already updated on the host volume."
+    warn "Run manually: docker exec <container> python manage.py collectstatic --noinput"
   else
-    info "Django container: $DJANGO_CTR"
-    info "Running collectstatic inside $DJANGO_CTR …"
+    info "Found Django container: ${BOLD}$DJANGO_CTR${RESET}"
 
-    # Shell script executed inside the container:
-    #   1. Auto-detect manage.py directory
-    #   2. Set DJANGO_SETTINGS_MODULE
-    #   3. Run collectstatic, show summary line
-    COLLECT_CMD='
-set -e
-# ── locate manage.py ──────────────────────────────────────────────────────────
-MANAGE_DIR=""
-for D in /home/rengine/rengine /home/rengine/web /usr/src/app /app /rengine/web; do
-  if [ -f "$D/manage.py" ]; then MANAGE_DIR="$D"; break; fi
-done
-if [ -z "$MANAGE_DIR" ]; then
-  echo "[ERR] manage.py not found in any known location"
-  exit 1
-fi
-cd "$MANAGE_DIR"
-echo "[INFO] Working dir: $MANAGE_DIR"
-
-# ── pick python binary ────────────────────────────────────────────────────────
-PY=$(command -v python 2>/dev/null || command -v python3 2>/dev/null || echo "")
-[ -z "$PY" ] && { echo "[ERR] python not found"; exit 1; }
-
-# ── settings module ───────────────────────────────────────────────────────────
-if [ -f "reNgine/settings_local.py" ]; then
-  export DJANGO_SETTINGS_MODULE="reNgine.settings_local"
-elif [ -f "reNgine/settings.py" ]; then
-  export DJANGO_SETTINGS_MODULE="reNgine.settings"
-fi
-echo "[INFO] Settings: $DJANGO_SETTINGS_MODULE"
-
-# ── run collectstatic ─────────────────────────────────────────────────────────
-"$PY" manage.py collectstatic --noinput 2>&1 \
-  | grep -E "static file|copied|unmodified|error|Error|Traceback" \
-  | tail -5
-echo "[DONE] collectstatic finished"
-'
-
-    if docker exec "$DJANGO_CTR" sh -c "$COLLECT_CMD"; then
-      success "collectstatic done inside $DJANGO_CTR"
+    # Find Python binary inside the container
+    CONTAINER_PY="$(find_python_in_container "$DJANGO_CTR")"
+    if [[ -z "$CONTAINER_PY" ]]; then
+      warn "Python binary not found inside $DJANGO_CTR — skipping collectstatic"
+      warn "Run manually: docker exec $DJANGO_CTR <python_path> manage.py collectstatic --noinput"
     else
-      warn "collectstatic failed — templates are updated but static files may be stale"
-      warn "Manual fix:  docker exec $DJANGO_CTR python manage.py collectstatic --noinput"
+      info "Python binary in container: $CONTAINER_PY"
+      info "Running collectstatic inside $DJANGO_CTR …"
+
+      # Shell script that runs INSIDE the container:
+      #   1. Locate manage.py
+      #   2. Set DJANGO_SETTINGS_MODULE
+      #   3. Run collectstatic, show summary
+      COLLECT_CMD="
+set -e
+# ── locate manage.py ──────────────────────────────────────────
+MANAGE_DIR=''
+for D in /home/rengine/rengine /home/rengine/web /usr/src/app /app /rengine/web; do
+  if [ -f \"\$D/manage.py\" ]; then MANAGE_DIR=\"\$D\"; break; fi
+done
+if [ -z \"\$MANAGE_DIR\" ]; then
+  echo '[ERR] manage.py not found'; exit 1
+fi
+cd \"\$MANAGE_DIR\"
+echo \"[INFO] Working dir: \$MANAGE_DIR\"
+
+# ── settings module ───────────────────────────────────────────
+if [ -f 'reNgine/settings_local.py' ]; then
+  export DJANGO_SETTINGS_MODULE='reNgine.settings_local'
+elif [ -f 'reNgine/settings.py' ]; then
+  export DJANGO_SETTINGS_MODULE='reNgine.settings'
+fi
+echo \"[INFO] Settings: \$DJANGO_SETTINGS_MODULE\"
+
+# ── run collectstatic ─────────────────────────────────────────
+\"$CONTAINER_PY\" manage.py collectstatic --noinput 2>&1 \\
+  | grep -E 'static file|copied|unmodified|[Ee]rror|Traceback' \\
+  | tail -5
+echo '[DONE] collectstatic finished'
+"
+      if docker exec "$DJANGO_CTR" sh -c "$COLLECT_CMD"; then
+        success "collectstatic done inside $DJANGO_CTR"
+      else
+        warn "collectstatic failed — templates updated, but static files may be stale"
+        warn "Manual fix: docker exec $DJANGO_CTR $CONTAINER_PY manage.py collectstatic --noinput"
+      fi
     fi
   fi
 
