@@ -1,0 +1,64 @@
+id: spring-boot-actuator-exposure
+info:
+  name: Spring Boot Actuator Endpoints Exposed
+  author: rengine-custom
+  severity: high
+  description: |
+    Detects exposed Spring Boot Actuator endpoints which can leak sensitive
+    application internals including environment variables, heap dumps, configuration, etc.
+  tags: exposure,springboot,actuator,java,misconfig
+  reference:
+    - https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/actuator"
+      - "{{BaseURL}}/actuator/env"
+      - "{{BaseURL}}/actuator/heapdump"
+      - "{{BaseURL}}/actuator/trace"
+      - "{{BaseURL}}/actuator/httptrace"
+      - "{{BaseURL}}/actuator/logfile"
+      - "{{BaseURL}}/actuator/mappings"
+      - "{{BaseURL}}/actuator/beans"
+      - "{{BaseURL}}/actuator/metrics"
+      - "{{BaseURL}}/actuator/shutdown"
+      - "{{BaseURL}}/actuator/info"
+      - "{{BaseURL}}/actuator/health"
+      - "{{BaseURL}}/actuator/loggers"
+      - "{{BaseURL}}/actuator/auditevents"
+      - "{{BaseURL}}/actuator/configprops"
+      - "{{BaseURL}}/actuator/scheduledtasks"
+      - "{{BaseURL}}/actuator/sessions"
+      - "{{BaseURL}}/actuator/threaddump"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - '"_links"'
+          - '"self"'
+          - '"actuator"'
+        part: body
+        condition: and
+
+      - type: word
+        words:
+          - '"systemProperties"'
+          - '"systemEnvironment"'
+          - '"applicationConfig"'
+        part: body
+        condition: or
+
+      - type: word
+        words:
+          - '"activeProfiles"'
+          - '"propertySources"'
+        part: body
+        condition: or
+
+    extractors:
+      - type: json
+        part: body
+        json:
+          - '._links'

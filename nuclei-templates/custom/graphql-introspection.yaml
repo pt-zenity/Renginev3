@@ -1,0 +1,63 @@
+id: graphql-introspection-enabled
+info:
+  name: GraphQL Introspection Enabled
+  author: rengine-custom
+  severity: medium
+  description: |
+    Detects GraphQL endpoints with introspection enabled in production.
+    Introspection allows attackers to enumerate the full API schema,
+    discovering all queries, mutations, types, and fields.
+  tags: custom,graphql,introspection,exposure,api
+  reference:
+    - https://owasp.org/www-project-web-security-testing-guide/
+    - https://graphql.org/learn/introspection/
+
+http:
+  - raw:
+      - |
+        POST /graphql HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/json
+
+        {"query":"{__schema{queryType{name}}}"}
+
+      - |
+        POST /api/graphql HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/json
+
+        {"query":"{__schema{queryType{name}}}"}
+
+      - |
+        POST /graphiql HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/json
+
+        {"query":"{__schema{queryType{name}}}"}
+
+      - |
+        POST /api/v1/graphql HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/json
+
+        {"query":"{__schema{types{name}}}"}
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - '"__schema"'
+          - '"queryType"'
+        part: body
+        condition: and
+
+    extractors:
+      - type: json
+        part: body
+        json:
+          - '.data.__schema.queryType.name'
+          - '.data.__schema.types[].name'

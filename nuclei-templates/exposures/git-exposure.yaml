@@ -1,0 +1,42 @@
+id: git-config-exposure
+info:
+  name: Git Configuration File Exposure
+  author: rengine-custom
+  severity: high
+  description: |
+    Detects exposed .git/config files that may contain sensitive repository information,
+    credentials, and remote URLs.
+  tags: exposure,git,config,sensitive
+  reference:
+    - https://owasp.org/www-project-web-security-testing-guide/
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.git/config"
+      - "{{BaseURL}}/.git/HEAD"
+      - "{{BaseURL}}/.git/FETCH_HEAD"
+      - "{{BaseURL}}/.git/logs/HEAD"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - "[core]"
+          - "[remote"
+          - "[branch"
+          - "repositoryformatversion"
+        part: body
+        condition: or
+
+      - type: word
+        words:
+          - "ref: refs/heads/"
+        part: body
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - "url = (.*)"
+          - "email = (.*)"

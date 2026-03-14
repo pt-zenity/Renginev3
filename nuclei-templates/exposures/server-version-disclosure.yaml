@@ -1,0 +1,39 @@
+id: server-version-disclosure
+
+info:
+  name: Server Version Disclosure
+  author: rengine-ng
+  severity: info
+  description: |
+    The server is disclosing its version information in response headers
+    which can help attackers identify vulnerable software versions.
+  tags: misconfiguration,info-disclosure,headers
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - "Server: Apache/[0-9.]+"
+          - "Server: nginx/[0-9.]+"
+          - "Server: Microsoft-IIS/[0-9.]+"
+          - "Server: LiteSpeed/[0-9.]+"
+          - "X-Powered-By: PHP/[0-9.]+"
+          - "X-Powered-By: ASP.NET"
+          - "X-AspNet-Version: [0-9.]+"
+          - "X-Generator: Drupal [0-9]"
+          - "X-Drupal-Cache"
+          - "X-Joomla-Cache"
+
+    extractors:
+      - type: regex
+        part: header
+        regex:
+          - "Server: ([^\r\n]+)"
+          - "X-Powered-By: ([^\r\n]+)"
+          - "X-AspNet-Version: ([^\r\n]+)"

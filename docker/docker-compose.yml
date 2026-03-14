@@ -48,12 +48,16 @@ services:
     volumes:
       - ../web:/home/rengine/rengine:rw,z
       - ./celery/entrypoint.sh:/entrypoint.sh:ro
+      - ./celery/init-wordlists.sh:/init-wordlists.sh:ro
       - scan_results:/home/rengine/scan_results
       - github_repos:/home/rengine/github_repos
       - tool_config:/home/rengine/.config
       - nuclei_templates:/home/rengine/nuclei-templates
       - gf_patterns:/home/rengine/.gf
       - wordlist:/home/rengine/wordlists
+      # Custom wordlists and nuclei templates (bind mounts from host)
+      - ../wordlists:/home/rengine/wordlists/custom:ro
+      - ../nuclei-templates:/home/rengine/nuclei-templates/custom:ro
     healthcheck:
       test: ["CMD", "poetry", "-C", "/home/rengine/rengine", "run", "celery","-A","reNgine","status"]
       interval: 10s
@@ -90,6 +94,9 @@ services:
       - nuclei_templates:/home/rengine/nuclei-templates
       - gf_patterns:/home/rengine/.gf
       - wordlist:/home/rengine/wordlists
+      # Custom wordlists and nuclei templates (bind mounts from host)
+      - ../wordlists:/home/rengine/wordlists/custom:ro
+      - ../nuclei-templates:/home/rengine/nuclei-templates/custom:ro
     networks:
       - rengine_network
 
@@ -113,6 +120,9 @@ services:
       - nuclei_templates:/home/rengine/nuclei-templates
       - gf_patterns:/home/rengine/.gf
       - wordlist:/home/rengine/wordlists
+      # Custom wordlists and nuclei templates (bind mounts from host)
+      - ../wordlists:/home/rengine/wordlists/custom:ro
+      - ../nuclei-templates:/home/rengine/nuclei-templates/custom:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "-k", "http://localhost:8000"]
       interval: 10s

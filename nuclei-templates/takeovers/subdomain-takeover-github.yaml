@@ -1,0 +1,31 @@
+id: subdomain-takeover-github-pages
+info:
+  name: Subdomain Takeover - GitHub Pages
+  author: rengine-custom
+  severity: high
+  description: |
+    Detects potential subdomain takeover via GitHub Pages.
+    When a CNAME points to GitHub Pages but the repository is deleted,
+    an attacker can claim the subdomain.
+  tags: takeover,subdomain,github,dns
+  reference:
+    - https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/10-Test_for_Subdomain_Takeover
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 404
+
+      - type: word
+        words:
+          - "There isn't a GitHub Pages site here"
+          - "For root URLs (like http://example.com/) you must provide an index.html file"
+          - "github.com"
+        part: body
+        condition: or

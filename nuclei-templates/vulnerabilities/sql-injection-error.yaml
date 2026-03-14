@@ -1,0 +1,71 @@
+id: sql-injection-error-based
+
+info:
+  name: SQL Injection - Error Based Detection
+  author: rengine-ng
+  severity: high
+  description: Detects SQL injection vulnerabilities through database error messages
+  tags: sqli,injection,vulnerability
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+    cvss-score: 9.8
+    cwe-id: CWE-89
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?id=1'"
+      - "{{BaseURL}}/?id=1\""
+      - "{{BaseURL}}/?id=1`"
+      - "{{BaseURL}}/?id=1--"
+      - "{{BaseURL}}/?id=1;--"
+      - "{{BaseURL}}/?id=1' OR '1'='1"
+      - "{{BaseURL}}/?id=1 AND 1=1--"
+      - "{{BaseURL}}/?id=1 AND 1=2--"
+      - "{{BaseURL}}/?q=1'"
+      - "{{BaseURL}}/?search=1'"
+      - "{{BaseURL}}/?name=1'"
+      - "{{BaseURL}}/?category=1'"
+      - "{{BaseURL}}/?page=1'"
+      - "{{BaseURL}}/?user=1'"
+      - "{{BaseURL}}/?email=1'@test.com"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - "sql syntax"
+          - "mysql_fetch"
+          - "mysql_num_rows"
+          - "mysql_query"
+          - "pg_query"
+          - "pg_exec"
+          - "ORA-01756"
+          - "ORA-00933"
+          - "ORA-00921"
+          - "ORA-00907"
+          - "Microsoft OLE DB Provider"
+          - "ODBC SQL Server Driver"
+          - "SQLite3::"
+          - "SQLiteException"
+          - "you have an error in your sql"
+          - "supplied argument is not a valid mysql"
+          - "unclosed quotation mark"
+          - "quoted string not properly terminated"
+        condition: or
+        case-insensitive: true
+
+      - type: regex
+        regex:
+          - "(?i)(mysql|sqlite|postgresql|mssql|oracle).*error"
+          - "(?i)Warning.*mysql_.*"
+          - "(?i)valid MySQL result"
+          - "(?i)MySqlException"
+          - "(?i)com\\.mysql\\.jdbc"
+          - "(?i)Zend_Db_(Adapter|Statement)_Mysqli_Exception"
+          - "(?i)SQLSTATE\\[.*\\]"
+          - "(?i)\\[Microsoft\\]\\[ODBC SQL Server Driver\\]"
+          - "(?i)\\[Sybase\\]\\[ODBC Sybase Driver\\]"
+          - "(?i)DB2 SQL error"
+          - "(?i)ORA-[0-9]+"
+          - "(?i)\\[SQL Server\\]"

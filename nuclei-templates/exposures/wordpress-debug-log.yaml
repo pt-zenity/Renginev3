@@ -1,0 +1,47 @@
+id: wordpress-debug-log-exposure
+info:
+  name: WordPress Debug Log Exposure
+  author: rengine-custom
+  severity: medium
+  description: |
+    Detects publicly accessible WordPress debug.log files that may contain
+    sensitive information including error messages, credentials, and file paths.
+  tags: wordpress,exposure,debug,logs,sensitive
+  reference:
+    - https://wordpress.org/support/article/debugging-in-wordpress/
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/wp-content/debug.log"
+      - "{{BaseURL}}/debug.log"
+      - "{{BaseURL}}/wp-debug.log"
+      - "{{BaseURL}}/php_errorlog"
+      - "{{BaseURL}}/error_log"
+      - "{{BaseURL}}/php_errors.log"
+      - "{{BaseURL}}/errors.log"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - "PHP Parse error"
+          - "PHP Warning"
+          - "PHP Notice"
+          - "PHP Fatal error"
+          - "PHP Deprecated"
+          - "WordPress database error"
+          - "[07-"
+          - "[08-"
+          - "[09-"
+          - "[10-"
+          - "[11-"
+          - "[12-"
+          - "wp-content"
+          - "wp-includes"
+        part: body
+        condition: or

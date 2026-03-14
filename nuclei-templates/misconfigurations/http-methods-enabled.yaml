@@ -1,0 +1,50 @@
+id: http-methods-enabled
+
+info:
+  name: Dangerous HTTP Methods Enabled
+  author: rengine-ng
+  severity: medium
+  description: |
+    Dangerous HTTP methods like PUT, DELETE, TRACE are enabled which can 
+    lead to unauthorized file upload, deletion or cross-site tracing attacks.
+  tags: misconfiguration,http-methods,security
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N
+    cvss-score: 6.5
+    cwe-id: CWE-650
+
+http:
+  - method: OPTIONS
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/api/"
+      - "{{BaseURL}}/api/v1/"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: regex
+        part: header
+        regex:
+          - "Allow:.*TRACE"
+          - "Allow:.*DELETE"
+          - "Allow:.*PUT"
+          - "Allow:.*CONNECT"
+        condition: or
+
+  - method: TRACE
+    path:
+      - "{{BaseURL}}/"
+
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        words:
+          - "TRACE / HTTP"

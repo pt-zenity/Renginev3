@@ -1,0 +1,59 @@
+id: kubernetes-api-exposure
+
+info:
+  name: Kubernetes API Server Exposure
+  author: rengine-ng
+  severity: critical
+  description: Detects exposed Kubernetes API server without authentication
+  tags: exposure,kubernetes,k8s,misconfiguration
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H
+    cvss-score: 10.0
+    cwe-id: CWE-306
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/api"
+      - "{{BaseURL}}/api/v1"
+      - "{{BaseURL}}/api/v1/pods"
+      - "{{BaseURL}}/api/v1/namespaces"
+      - "{{BaseURL}}/api/v1/secrets"
+      - "{{BaseURL}}/api/v1/nodes"
+      - "{{BaseURL}}/apis"
+      - "{{BaseURL}}/version"
+      - "{{BaseURL}}/healthz"
+      - "{{BaseURL}}:8080/api"
+      - "{{BaseURL}}:6443/api"
+      - "{{BaseURL}}:10250/pods"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        words:
+          - "apiVersion"
+          - "\"kind\""
+          - "\"items\""
+        condition: or
+
+  - method: GET
+    path:
+      - "{{BaseURL}}:10255/pods"
+      - "{{BaseURL}}:10255/stats/summary"
+
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        words:
+          - "\"pods\""
+          - "\"node\""
+        condition: or

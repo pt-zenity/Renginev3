@@ -1,0 +1,36 @@
+id: docker-registry-exposure
+
+info:
+  name: Docker Registry Exposure
+  author: rengine-ng
+  severity: high
+  description: Detects exposed Docker registry API without authentication
+  tags: exposure,docker,registry,misconfiguration
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N
+    cvss-score: 7.5
+    cwe-id: CWE-306
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/v2/"
+      - "{{BaseURL}}/v2/_catalog"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        words:
+          - "repositories"
+          - "\"tags\""
+        condition: or
+
+      - type: word
+        part: header
+        words:
+          - "Docker-Distribution-Api-Version"

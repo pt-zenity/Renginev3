@@ -1,0 +1,101 @@
+id: subdomain-takeover-generic
+info:
+  name: Subdomain Takeover - Generic Cloud Services
+  author: rengine-custom
+  severity: high
+  description: |
+    Detects potential subdomain takeovers across various cloud and SaaS platforms.
+    These occur when DNS records point to unclaimed cloud services.
+  tags: takeover,subdomain,dns,cloud
+  reference:
+    - https://github.com/EdOverflow/can-i-take-over-xyz
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        name: heroku-takeover
+        words:
+          - "No such app"
+          - "herokucdn.com"
+        part: body
+        condition: and
+
+      - type: word
+        name: netlify-takeover
+        words:
+          - "Not Found - Request ID"
+          - "netlify.com"
+        part: body
+        condition: and
+
+      - type: word
+        name: shopify-takeover
+        words:
+          - "Sorry, this shop is currently unavailable"
+          - "myshopify.com"
+        part: body
+        condition: and
+
+      - type: word
+        name: fastly-takeover
+        words:
+          - "Fastly error: unknown domain"
+          - "fastly.net"
+        part: body
+        condition: and
+
+      - type: word
+        name: amazonaws-takeover
+        words:
+          - "NoSuchBucket"
+          - "The specified bucket does not exist"
+          - "amazonaws.com"
+        part: body
+        condition: and
+
+      - type: word
+        name: azure-takeover
+        words:
+          - "404 Web Site not found"
+          - "azurewebsites.net"
+          - "azure.com"
+        part: body
+        condition: and
+
+      - type: word
+        name: surge-sh-takeover
+        words:
+          - "project not found"
+          - "surge.sh"
+        part: body
+        condition: and
+
+      - type: word
+        name: cargo-takeover
+        words:
+          - "404 Not Found"
+          - "cargocollective.com"
+        part: body
+        condition: and
+
+      - type: word
+        name: hubspot-takeover
+        words:
+          - "This page isn't available"
+          - "hs-sites.com"
+          - "hubspot.com"
+        part: body
+        condition: and
+
+      - type: word
+        name: tumblr-takeover
+        words:
+          - "There's nothing here"
+          - "tumblr.com"
+        part: body
+        condition: and

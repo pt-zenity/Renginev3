@@ -1,0 +1,47 @@
+id: cors-misconfiguration
+info:
+  name: CORS Misconfiguration
+  author: rengine-custom
+  severity: medium
+  description: |
+    Detects CORS (Cross-Origin Resource Sharing) misconfigurations that may allow
+    unauthorized cross-origin requests, potentially leading to data theft or CSRF.
+  tags: cors,misconfiguration,headers
+  reference:
+    - https://portswigger.net/web-security/cors
+    - https://owasp.org/www-community/attacks/CORS_OriginHeaderScrutiny
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+      - "{{BaseURL}}/api"
+      - "{{BaseURL}}/api/v1"
+      - "{{BaseURL}}/api/v2"
+
+    headers:
+      Origin: "https://evil.com"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 201
+          - 204
+
+      - type: word
+        words:
+          - "access-control-allow-origin: https://evil.com"
+          - "access-control-allow-origin: *"
+        part: header
+        condition: or
+
+    extractors:
+      - type: regex
+        part: header
+        name: cors_header
+        regex:
+          - "access-control-allow-origin: (.*)"
+          - "access-control-allow-credentials: (.*)"
+          - "access-control-allow-methods: (.*)"

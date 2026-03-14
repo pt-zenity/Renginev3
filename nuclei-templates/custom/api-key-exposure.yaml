@@ -1,0 +1,70 @@
+id: api-key-exposure
+info:
+  name: API Key / Secret Token Exposure in HTTP Response
+  author: rengine-custom
+  severity: high
+  description: |
+    Detects API keys, tokens, and secrets accidentally exposed in HTTP responses.
+    Covers common patterns for AWS, Google, Stripe, Twilio, GitHub, and generic tokens.
+  tags: custom,exposure,api-key,secret,token,credentials
+  reference:
+    - https://owasp.org/www-project-top-ten/2017/A3_2017-Sensitive_Data_Exposure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+      - "{{BaseURL}}/js/app.js"
+      - "{{BaseURL}}/js/main.js"
+      - "{{BaseURL}}/js/bundle.js"
+      - "{{BaseURL}}/static/js/main.js"
+      - "{{BaseURL}}/assets/js/app.js"
+      - "{{BaseURL}}/config.js"
+      - "{{BaseURL}}/env.js"
+      - "{{BaseURL}}/settings.js"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: regex
+        regex:
+          # AWS Access Key
+          - "AKIA[0-9A-Z]{16}"
+          # AWS Secret Key
+          - "['\"]aws_secret_access_key['\"]\\s*:\\s*['\"][A-Za-z0-9/+=]{40}['\"]"
+          # Google API Key
+          - "AIza[0-9A-Za-z\\-_]{35}"
+          # Google OAuth
+          - "[0-9]+-[0-9A-Za-z_]{32}\\.apps\\.googleusercontent\\.com"
+          # GitHub Token
+          - "gh[pousr]_[A-Za-z0-9_]{36}"
+          # Stripe Secret Key
+          - "sk_live_[0-9a-zA-Z]{24}"
+          # Stripe Publishable Key
+          - "pk_live_[0-9a-zA-Z]{24}"
+          # Generic secret patterns
+          - "(?i)(api[_-]?key|apikey|api[_-]?secret|app[_-]?secret|app[_-]?key|secret[_-]?key|secret_token|access_token|auth_token|private_key)\\s*[=:\"']\\s*['\"]?([A-Za-z0-9+/]{20,})['\"]?"
+        part: body
+        condition: or
+
+    extractors:
+      - type: regex
+        part: body
+        name: aws_key
+        regex:
+          - "AKIA[0-9A-Z]{16}"
+
+      - type: regex
+        part: body
+        name: google_key
+        regex:
+          - "AIza[0-9A-Za-z\\-_]{35}"
+
+      - type: regex
+        part: body
+        name: github_token
+        regex:
+          - "gh[pousr]_[A-Za-z0-9_]{36}"

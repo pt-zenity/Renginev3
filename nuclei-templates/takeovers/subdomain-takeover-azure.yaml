@@ -1,0 +1,53 @@
+id: subdomain-takeover-azure
+
+info:
+  name: Subdomain Takeover - Azure Services
+  author: rengine-ng
+  severity: high
+  description: |
+    Detects potential subdomain takeover via unclaimed Azure services 
+    (App Service, Blob Storage, CDN, etc.)
+  tags: takeover,azure,cloud,subdomain
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:H/A:N
+    cvss-score: 8.2
+    cwe-id: CWE-16
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+
+    matchers-condition: or
+    matchers:
+      # Azure App Service
+      - type: word
+        part: body
+        words:
+          - "404 Web Site not found"
+        condition: and
+
+      # Azure Blob Storage
+      - type: word
+        part: body
+        words:
+          - "BlobNotFound"
+          - "The specified blob does not exist"
+        condition: or
+
+      # Azure CDN
+      - type: word
+        part: body
+        words:
+          - "Verizon CDN"
+          - "EdgeCast"
+          - "This resource does not exist"
+        condition: or
+
+      # Azure Traffic Manager
+      - type: word
+        part: body
+        words:
+          - "Traffic Manager"
+          - "There is no website configured at this address"
+        condition: or

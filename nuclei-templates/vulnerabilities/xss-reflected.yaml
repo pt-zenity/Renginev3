@@ -1,0 +1,42 @@
+id: xss-reflected-detection
+info:
+  name: Reflected XSS Detection
+  author: rengine-custom
+  severity: medium
+  description: |
+    Detects reflected Cross-Site Scripting (XSS) vulnerabilities in URL parameters
+    and form inputs. Uses polyglot payloads to maximize detection coverage.
+  tags: xss,reflected,vulnerability,owasp-a03
+  reference:
+    - https://owasp.org/www-community/attacks/xss/
+    - https://portswigger.net/web-security/cross-site-scripting
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?q=<script>alert(1)</script>"
+      - "{{BaseURL}}/?search=<script>alert(1)</script>"
+      - "{{BaseURL}}/?name=<img src=x onerror=alert(1)>"
+      - "{{BaseURL}}/?id=\"><script>alert(1)</script>"
+      - "{{BaseURL}}/?callback=<script>alert(1)</script>"
+      - "{{BaseURL}}/?redirect=javascript:alert(1)"
+      - "{{BaseURL}}/?q=%3Cscript%3Ealert(1)%3C%2Fscript%3E"
+      - "{{BaseURL}}/?input='\"><svg onload=alert(1)>"
+      - "{{BaseURL}}/?t=<script>alert(document.domain)</script>"
+      - "{{BaseURL}}/?msg=<img/src=x onerror=alert(1)>"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - "<script>alert(1)</script>"
+          - "<img src=x onerror=alert(1)>"
+          - "<svg onload=alert(1)>"
+          - "javascript:alert(1)"
+          - "<img/src=x onerror=alert(1)>"
+        part: body
+        condition: or

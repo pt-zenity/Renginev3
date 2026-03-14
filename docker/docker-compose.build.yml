@@ -7,7 +7,9 @@ services:
 
   celery:
     build:
-      context: ./celery
+      # Use project root as context to include wordlists/ and nuclei-templates/
+      context: ..
+      dockerfile: docker/celery/Dockerfile
       args:
         HOST_UID: ${HOST_UID}
         HOST_GID: ${HOST_GID}

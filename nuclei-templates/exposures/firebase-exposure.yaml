@@ -1,0 +1,43 @@
+id: firebase-exposure
+
+info:
+  name: Firebase Database Exposure
+  author: rengine-ng
+  severity: high
+  description: Detects publicly accessible Firebase databases
+  tags: exposure,firebase,database,misconfiguration
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N
+    cvss-score: 7.5
+    cwe-id: CWE-306
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.json"
+      - "{{BaseURL}}/.json?shallow=true"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: header
+        words:
+          - "application/json"
+        negative: false
+
+      - type: word
+        part: body
+        words:
+          - "null"
+          - "{"
+        condition: or
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"[a-zA-Z_]+"\s*:\s*"[^"]*"'

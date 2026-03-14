@@ -1,0 +1,80 @@
+id: sql-injection-error-based
+info:
+  name: SQL Injection - Error Based Detection
+  author: rengine-custom
+  severity: high
+  description: |
+    Detects SQL injection vulnerabilities using error-based technique.
+    Tests for common SQL error messages from MySQL, MSSQL, PostgreSQL, Oracle.
+  tags: sqli,sql-injection,vulnerability,owasp-a03
+  reference:
+    - https://owasp.org/www-community/attacks/SQL_Injection
+    - https://portswigger.net/web-security/sql-injection
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?id=1'"
+      - "{{BaseURL}}/?id=1'--"
+      - "{{BaseURL}}/?id=1\" OR \"1\"=\"1"
+      - "{{BaseURL}}/?id=1 AND 1=1--"
+      - "{{BaseURL}}/?q=1'"
+      - "{{BaseURL}}/?search=1'"
+      - "{{BaseURL}}/?category=1'"
+      - "{{BaseURL}}/?page=1'"
+      - "{{BaseURL}}/?user=1'"
+      - "{{BaseURL}}/?name=1'"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - "You have an error in your SQL syntax"
+          - "mysql_fetch_array()"
+          - "mysql_num_rows()"
+          - "mysql_fetch_row()"
+          - "supplied argument is not a valid MySQL"
+          - "on MySQL result index"
+          - "Warning: mysql"
+          - "function.mysql"
+          - "mysql error"
+        part: body
+        case-insensitive: true
+        condition: or
+
+      - type: word
+        words:
+          - "Unclosed quotation mark after the character string"
+          - "Incorrect syntax near"
+          - "SQLSTATE"
+          - "OLE DB"
+          - "ODBC SQL Server Driver"
+          - "Microsoft OLE DB Provider for SQL Server"
+          - "SQLServer JDBC Driver"
+          - "SQLState"
+          - "Procedure or function"
+        part: body
+        case-insensitive: true
+        condition: or
+
+      - type: word
+        words:
+          - "ERROR:  unterminated quoted string"
+          - "PG::SyntaxError"
+          - "org.postgresql.util.PSQLException"
+          - "PSQLException"
+        part: body
+        case-insensitive: true
+        condition: or
+
+      - type: word
+        words:
+          - "ORA-00933"
+          - "ORA-00907"
+          - "ORA-00942"
+          - "ORA-00911"
+          - "Oracle error"
+          - "quoted string not properly terminated"
+        part: body
+        case-insensitive: true
+        condition: or

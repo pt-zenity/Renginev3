@@ -1,0 +1,62 @@
+id: debug-mode-enabled
+
+info:
+  name: Debug Mode Enabled
+  author: rengine-ng
+  severity: medium
+  description: |
+    Debug mode is enabled on the application exposing sensitive 
+    environment variables and configuration details.
+  tags: misconfiguration,debug,exposure
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:M/I:N/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-489
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/debug"
+      - "{{BaseURL}}/_debug"
+      - "{{BaseURL}}/__debug__"
+      - "{{BaseURL}}/debug/default/view"
+      - "{{BaseURL}}/debug/default/toolbar"
+      - "{{BaseURL}}/console"
+      - "{{BaseURL}}/_console"
+      - "{{BaseURL}}/phpdebugbar"
+      - "{{BaseURL}}/api/debug"
+      - "{{BaseURL}}/debug/vars"
+      - "{{BaseURL}}/debug/pprof/"
+      - "{{BaseURL}}/api/v1/debug"
+      - "{{BaseURL}}/__clockwork"
+      - "{{BaseURL}}/clockwork"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - "DEBUG"
+          - "Traceback (most recent call last)"
+          - "Exception"
+          - "Stack trace:"
+          - "at Object.<anonymous>"
+          - "PhpDebugBar"
+          - "SYMFONY_DEBUG"
+          - "DJANGO_DEBUG"
+          - "LARAVEL_DEBUG"
+        condition: or
+        case-insensitive: true
+
+      - type: regex
+        regex:
+          - "(?i)debug.*=.*true"
+          - "(?i)DEBUG.*mode.*enabled"
+
+      - type: word
+        part: body
+        words:
+          - "Django Debug Mode"
+          - "Rails Error"
+          - "Application Error"
+          - "Whoops"
+        condition: or

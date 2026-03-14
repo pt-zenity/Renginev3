@@ -8,6 +8,12 @@ print_msg() {
 }
 
 RENGINE_FOLDER="/home/$USERNAME/rengine"
+
+# Initialize custom wordlists and nuclei templates into volumes
+if [ -f "/init-wordlists.sh" ]; then
+  print_msg "Initialize custom wordlists and Nuclei templates"
+  bash /init-wordlists.sh || true
+fi
 MAX_CONCURRENCY=${MAX_CONCURRENCY:-20}
 MIN_CONCURRENCY=${MIN_CONCURRENCY:-5}
 CELERY_LOGLEVEL=${CELERY_LOGLEVEL:-info}

@@ -1,0 +1,63 @@
+id: http-security-headers-missing
+info:
+  name: Missing HTTP Security Headers
+  author: rengine-custom
+  severity: low
+  description: |
+    Detects missing or misconfigured HTTP security headers that can reduce
+    attack surface. Checks for HSTS, X-Frame-Options, CSP, X-Content-Type-Options,
+    Permissions-Policy, and Referrer-Policy.
+  tags: custom,headers,security,misconfiguration,hardening
+  reference:
+    - https://owasp.org/www-project-secure-headers/
+    - https://securityheaders.com/
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        name: missing-hsts
+        words:
+          - "strict-transport-security"
+        part: header
+        negative: true
+        condition: and
+
+      - type: word
+        name: missing-x-frame-options
+        words:
+          - "x-frame-options"
+        part: header
+        negative: true
+        condition: and
+
+      - type: word
+        name: missing-csp
+        words:
+          - "content-security-policy"
+        part: header
+        negative: true
+        condition: and
+
+      - type: word
+        name: missing-x-content-type
+        words:
+          - "x-content-type-options"
+        part: header
+        negative: true
+        condition: and
+
+    extractors:
+      - type: kval
+        part: header
+        kval:
+          - strict-transport-security
+          - x-frame-options
+          - content-security-policy
+          - x-content-type-options
+          - referrer-policy
+          - permissions-policy

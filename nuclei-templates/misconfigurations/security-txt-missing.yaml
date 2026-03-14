@@ -1,0 +1,33 @@
+id: security-txt-missing
+
+info:
+  name: Security.txt Missing
+  author: rengine-ng
+  severity: info
+  description: |
+    security.txt is a proposed standard to define security disclosure policies.
+    Its absence may indicate lack of security maturity.
+  reference:
+    - https://securitytxt.org/
+  tags: misconfiguration,security,disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.well-known/security.txt"
+      - "{{BaseURL}}/security.txt"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 404
+          - 403
+          - 500
+
+      - type: word
+        part: body
+        words:
+          - "Contact:"
+          - "Expires:"
+        negative: true

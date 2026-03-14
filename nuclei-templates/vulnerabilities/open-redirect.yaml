@@ -1,0 +1,51 @@
+id: open-redirect-detection
+info:
+  name: Open Redirect Vulnerability
+  author: rengine-custom
+  severity: medium
+  description: |
+    Detects open redirect vulnerabilities that allow attackers to redirect users
+    to malicious URLs via manipulated parameters.
+  tags: redirect,open-redirect,vulnerability,owasp
+  reference:
+    - https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html
+    - https://portswigger.net/kb/issues/00500100_open-redirection-reflected
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?redirect=https://evil.com"
+      - "{{BaseURL}}/?redirect_uri=https://evil.com"
+      - "{{BaseURL}}/?redirectUrl=https://evil.com"
+      - "{{BaseURL}}/?return=https://evil.com"
+      - "{{BaseURL}}/?returnUrl=https://evil.com"
+      - "{{BaseURL}}/?next=https://evil.com"
+      - "{{BaseURL}}/?url=https://evil.com"
+      - "{{BaseURL}}/?target=https://evil.com"
+      - "{{BaseURL}}/?to=https://evil.com"
+      - "{{BaseURL}}/?goto=https://evil.com"
+      - "{{BaseURL}}/?forward=https://evil.com"
+      - "{{BaseURL}}/?location=https://evil.com"
+      - "{{BaseURL}}/?destination=https://evil.com"
+      - "{{BaseURL}}/?callback=https://evil.com"
+      - "{{BaseURL}}/?link=https://evil.com"
+      - "{{BaseURL}}/?out=https://evil.com"
+      - "{{BaseURL}}/?view=https://evil.com"
+      - "{{BaseURL}}/?continue=https://evil.com"
+      - "{{BaseURL}}/?go=https://evil.com"
+      - "{{BaseURL}}/?q=https://evil.com"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 301
+          - 302
+          - 303
+          - 307
+          - 308
+
+      - type: word
+        words:
+          - "evil.com"
+        part: header

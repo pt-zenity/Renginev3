@@ -152,11 +152,23 @@ RUN ln -s /usr/local/bin/geckodriver $BINPATH/geckodriver && \
     wget https://raw.githubusercontent.com/maurosoria/dirsearch/master/db/dicc.txt -O $WORDLISTPATH/dicc.txt && \
     wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Fuzzing/fuzz-Bo0oM.txt -O $WORDLISTPATH/fuzz-Bo0oM.txt && \
     wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/deepmagic.com-prefixes-top50000.txt -O $WORDLISTPATH/deepmagic.com-prefixes-top50000.txt && \
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt -O $WORDLISTPATH/common.txt && \
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/big.txt -O $WORDLISTPATH/big.txt && \
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-medium-directories.txt -O $WORDLISTPATH/raft-medium-directories.txt && \
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-medium-files.txt -O $WORDLISTPATH/raft-medium-files.txt && \
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-5000.txt -O $WORDLISTPATH/subdomains-top1million-5000.txt && \
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-20000.txt -O $WORDLISTPATH/subdomains-top1million-20000.txt && \
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/Common-Credentials/10-million-password-list-top-10000.txt -O $WORDLISTPATH/passwords-top10000.txt && \
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Usernames/top-usernames-shortlist.txt -O $WORDLISTPATH/usernames-shortlist.txt && \
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/api/api-endpoints.txt -O $WORDLISTPATH/api-endpoints.txt && \
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/RobotsDisallowed/top10000.txt -O $WORDLISTPATH/robots-disallowed.txt && \
     mkdir -p /home/$USERNAME/nuclei-templates && wget https://raw.githubusercontent.com/NagliNagli/Shockwave-OSS/bd7445cd320a174d3073f0a61867a40849d28436/ssrf.yaml -O /home/$USERNAME/nuclei-templates/ssrf_nagli.yaml && \
     mkdir -p /home/$USERNAME/results
 
 # Copy poetry config files
-COPY --chown=$USERNAME:$USERNAME ./*.toml /home/$USERNAME
+# Note: When building with project root as context (docker-compose.build.yml),
+# paths are relative to project root. When building standalone, paths are relative to docker/celery/
+COPY --chown=$USERNAME:$USERNAME docker/celery/*.toml /home/$USERNAME
 
 # Install aliases for tools needing a pyproject.toml
 RUN cd $TOOLPATH/.github/OneForAll && mv /home/$USERNAME/oneforall-pyproject.toml pyproject.toml && poetry env use python3 && poetry install --no-cache && echo "#!/bin/bash\n\npoetry -C $TOOLPATH/.github/OneForAll/ run python $TOOLPATH/.github/OneForAll/oneforall.py \"\$@\"" > $BINPATH/oneforall && chmod +x $BINPATH/oneforall && \
@@ -171,15 +183,25 @@ RUN nuclei -silent && naabu -version && subfinder -version && \
     mkdir -p /home/$USERNAME/.config/theHarvester && \
     mkdir -p /home/$USERNAME/.config/amass && \
     mkdir -p /home/$USERNAME/.config/gau
-COPY --chown=$USERNAME:$USERNAME ./config/the-harvester-api-keys.yaml /home/$USERNAME/.config/theHarvester/api-keys.yaml
-COPY --chown=$USERNAME:$USERNAME ./config/amass.ini /home/$USERNAME/.config/amass/config.ini
-COPY --chown=$USERNAME:$USERNAME ./config/gau.toml /home/$USERNAME/.config/gau/config.toml
+COPY --chown=$USERNAME:$USERNAME docker/celery/config/the-harvester-api-keys.yaml /home/$USERNAME/.config/theHarvester/api-keys.yaml
+COPY --chown=$USERNAME:$USERNAME docker/celery/config/amass.ini /home/$USERNAME/.config/amass/config.ini
+COPY --chown=$USERNAME:$USERNAME docker/celery/config/gau.toml /home/$USERNAME/.config/gau/config.toml
 RUN ln -s /home/$USERNAME/.config/theHarvester /home/$USERNAME/.theHarvester
-COPY ./entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh && \
+
+# Copy custom wordlists (from project root wordlists/ directory)
+COPY --chown=$USERNAME:$USERNAME wordlists/ $WORDLISTPATH/custom/
+
+# Copy custom nuclei templates (from project root nuclei-templates/ directory)
+COPY --chown=$USERNAME:$USERNAME nuclei-templates/ /home/$USERNAME/nuclei-templates/custom/
+
+COPY docker/celery/entrypoint.sh /entrypoint.sh
+COPY docker/celery/init-wordlists.sh /init-wordlists.sh
+RUN chmod +x /entrypoint.sh /init-wordlists.sh && \
     mkdir -p /home/$USERNAME/rengine /home/$USERNAME/scan_results \
     && chown -R $USERNAME:$USERNAME /home/$USERNAME/rengine \
-    && chown -R $USERNAME:$USERNAME /home/$USERNAME/scan_results
+    && chown -R $USERNAME:$USERNAME /home/$USERNAME/scan_results \
+    && chown -R $USERNAME:$USERNAME $WORDLISTPATH/custom/ \
+    && chown -R $USERNAME:$USERNAME /home/$USERNAME/nuclei-templates/custom/
 VOLUME /home/$USERNAME/rengine
 VOLUME /home/$USERNAME/scan_results
 WORKDIR /home/$USERNAME/rengine
