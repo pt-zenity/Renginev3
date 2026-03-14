@@ -200,28 +200,61 @@ list_rengine_app_containers() {
 # ─── Find Python binary inside a container ───────────────────────────────────
 find_python_in_container() {
   local cname="$1"
-  # 1. Try well-known absolute paths (handles venv, system, custom installs)
+
+  # Strategy: find the Python that has django-environ installed.
+  # reNgine settings.py imports environ at the top — without it collectstatic
+  # always fails, regardless of which Python binary we use.
+  #
+  # Step 1: find the Python binary that can actually "import environ"
+  local py found
+
+  # Common explicit paths (handles venv, system, pyenv, conda)
   for py in \
     "/usr/local/bin/python3" \
     "/usr/bin/python3" \
     "/home/rengine/.venv/bin/python3" \
+    "/home/rengine/venv/bin/python3" \
     "/venv/bin/python3" \
     "/opt/venv/bin/python3" \
+    "/opt/pyenv/shims/python3" \
     "/usr/local/bin/python" \
     "/usr/bin/python"; do
-    if docker exec "$cname" test -x "$py" 2>/dev/null; then
+    # Check binary exists AND can import environ
+    if docker exec "$cname" sh -c \
+      "test -x '$py' && '$py' -c 'import environ' 2>/dev/null" 2>/dev/null; then
       echo "$py"; return
     fi
   done
-  # 2. Try via shell PATH (works when exec shell has correct $PATH)
-  local found
-  found=$(docker exec "$cname" sh -c \
-    'command -v python3 2>/dev/null || command -v python 2>/dev/null' 2>/dev/null || true)
+
+  # Step 2: locate environ package on the filesystem and infer Python from it
+  found=$(docker exec "$cname" sh -c '
+    # Find environ package and work back to its Python binary
+    for sp in $(find /usr /home /opt /venv -maxdepth 8 -type d -name "environ" 2>/dev/null | head -5); do
+      # site-packages/environ → site-packages → python3.x/site-packages → python3.x
+      py=$(echo "$sp" | sed "s|/lib/python[0-9.]*.*||")/bin/python3
+      [ -x "$py" ] && echo "$py" && exit 0
+      # try without version suffix
+      py=$(echo "$sp" | sed "s|/lib/python[0-9.]*.*||")/bin/python
+      [ -x "$py" ] && echo "$py" && exit 0
+    done
+  ' 2>/dev/null || true)
   [[ -n "$found" ]] && { echo "$found"; return; }
-  # 3. Filesystem search (slowest, last resort)
+
+  # Step 3: any Python binary that can import environ (via PATH)
+  found=$(docker exec "$cname" sh -c '
+    for py in python3 python; do
+      if command -v "$py" >/dev/null 2>&1 && "$py" -c "import environ" 2>/dev/null; then
+        command -v "$py"; exit 0
+      fi
+    done
+  ' 2>/dev/null || true)
+  [[ -n "$found" ]] && { echo "$found"; return; }
+
+  # Step 4: return any Python we can find (even without environ — stub will handle it)
   found=$(docker exec "$cname" sh -c \
-    'find /usr /home /opt /venv -maxdepth 6 -name "python3" -type f 2>/dev/null | head -1' \
-    2>/dev/null || true)
+    'command -v python3 2>/dev/null || command -v python 2>/dev/null
+     find /usr /home /opt /venv -maxdepth 6 -name "python3" -type f 2>/dev/null | head -1' \
+    2>/dev/null | head -1 || true)
   echo "${found:-}"
 }
 
@@ -427,7 +460,7 @@ echo "[INFO] Working dir: $MANAGE_DIR"
 [ -f "reNgine/settings.py" ]       && export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-reNgine.settings}"
 echo "[INFO] Settings: $DJANGO_SETTINGS_MODULE"
 
-# ── patch __init__.py: stub celery import so it works in any container ────────
+# ── patch __init__.py: stub celery import ─────────────────
 INIT="$MANAGE_DIR/reNgine/__init__.py"
 INIT_PATCHED=false
 if [ -f "$INIT" ] && grep -q "from .celery" "$INIT"; then
@@ -437,6 +470,57 @@ if [ -f "$INIT" ] && grep -q "from .celery" "$INIT"; then
   echo "[INFO] Patched __init__.py (celery stub)"
 fi
 
+# ── patch settings.py: inject stub environ if module missing ──────────────────
+# reNgine/settings.py imports django-environ at the top:
+#   import environ; env = environ.Env(...)
+# If environ is not installed we create a minimal stub module so that
+# collectstatic (which only needs STATIC_ROOT / STATICFILES_DIRS) can run.
+SETTINGS_FILE="$MANAGE_DIR/reNgine/settings.py"
+ENVIRON_STUB_INJECTED=false
+if ! "$CONTAINER_PY" -c "import environ" 2>/dev/null; then
+  echo "[INFO] django-environ not found — injecting stub"
+  # Write a minimal environ stub into a temp package that shadows the real one
+  STUB_DIR="$MANAGE_DIR/_env_stub"
+  mkdir -p "$STUB_DIR"
+  cat > "$STUB_DIR/environ.py" << '"'"'STUB_EOF'"'"'
+"""Minimal django-environ stub for collectstatic only."""
+import os, re
+
+class Env:
+    def __init__(self, **defaults): self._defaults = defaults
+    def __call__(self, key, default=None, cast=None):
+        v = os.environ.get(key, self._defaults.get(key, default))
+        if cast and v is not None:
+            try: return cast(v)
+            except: pass
+        return v
+    def db(self, var="DATABASE_URL", default="sqlite:///stub.db"):
+        url = os.environ.get(var, default)
+        return {"ENGINE": "django.db.backends.sqlite3", "NAME": "/tmp/stub_cs.db"}
+    def cache(self, var="CACHE_URL", default="locmemcache://"):
+        return {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}
+    def bool(self, key, default=False): return bool(self(key, default))
+    def int(self, key, default=0): return int(self(key, default) or default)
+    def list(self, key, default=None): return default or []
+    def str(self, key, default=""): return str(self(key, default) or "")
+    def path(self, key, default="/"): return Path(str(self(key, default) or default))
+    def read_env(self, *a, **kw): pass
+    @staticmethod
+    def read_env(*a, **kw): pass
+
+class Path:
+    def __init__(self, p=""): self._path = p
+    def __str__(self): return self._path
+    def __call__(self, *parts): return os.path.join(self._path, *parts)
+    def __add__(self, other): return Path(self._path + other)
+
+def Path(p): return p
+STUB_EOF
+  # Prepend stub dir to PYTHONPATH so settings.py finds it first
+  export PYTHONPATH="$STUB_DIR:${PYTHONPATH:-}"
+  ENVIRON_STUB_INJECTED=true
+fi
+
 # ── collectstatic ─────────────────────────────────────────
 TMPOUT=$("$CONTAINER_PY" manage.py collectstatic --noinput 2>&1)
 CS=$?
@@ -444,8 +528,43 @@ CS=$?
 # ── always restore __init__.py ────────────────────────────
 $INIT_PATCHED && mv "${INIT}.bak_cs" "$INIT" && echo "[INFO] Restored __init__.py"
 
-echo "$TMPOUT" | grep -iE "static file|copied|unmodified|error|traceback" | tail -6 || true
-[ $CS -ne 0 ] && { echo "[ERR] exit code $CS"; exit 1; }
+# ── remove environ stub ───────────────────────────────────
+$ENVIRON_STUB_INJECTED && rm -rf "$STUB_DIR" && echo "[INFO] Removed environ stub"
+
+if [ $CS -ne 0 ]; then
+  echo "$TMPOUT" | grep -iE "error|traceback|ModuleNotFound" | tail -4 || true
+  echo "[WARN] manage.py collectstatic failed (exit $CS) — trying direct file copy fallback"
+
+  # ── Direct copy fallback: copy custom/ and assets/ into staticfiles_collected ─
+  # Since templates and static source files are already on the shared host volume,
+  # we only need to sync the changed files into STATIC_ROOT.
+  STATIC_SRC="$MANAGE_DIR/../static"
+  # Try known STATIC_ROOT locations
+  for DST in \
+    "$MANAGE_DIR/staticfiles_collected" \
+    "$MANAGE_DIR/../staticfiles_collected" \
+    "/home/rengine/staticfiles_collected" \
+    "/staticfiles_collected"; do
+    if [ -d "$DST" ]; then STATIC_DST="$DST"; break; fi
+  done
+  [ -z "$STATIC_DST" ] && STATIC_DST="$MANAGE_DIR/staticfiles_collected" && mkdir -p "$STATIC_DST"
+
+  if [ -d "$STATIC_SRC/custom" ]; then
+    mkdir -p "$STATIC_DST/custom" "$STATIC_DST/assets"
+    cp -rf "$STATIC_SRC/custom/." "$STATIC_DST/custom/" 2>/dev/null \
+      && echo "[OK] custom/ synced to $STATIC_DST/custom/" \
+      || echo "[WARN] custom/ copy had errors"
+    cp -rf "$STATIC_SRC/assets/." "$STATIC_DST/assets/" 2>/dev/null \
+      && echo "[OK] assets/ synced" || true
+    echo "[DONE] Direct file copy complete"
+    exit 0
+  else
+    echo "[ERR] Static source not found at $STATIC_SRC"
+    exit 1
+  fi
+fi
+
+echo "$TMPOUT" | grep -iE "static file|copied|unmodified" | tail -6 || true
 echo "[DONE] collectstatic finished"
 '
 
