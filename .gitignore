@@ -70,3 +70,4 @@ get-docker.sh
 # Environment variables
 .env
 web/db_local.sqlite3
+.github/workflows/
