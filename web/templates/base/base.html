@@ -5,71 +5,96 @@
   <head>
     <meta charset="utf-8" />
     <title>{% block title %} {% endblock title %}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="theme-color" content="#0a0e1a">
+
+    <!-- Preconnect to CDN origins for faster DNS + TLS -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.datatables.net" crossorigin>
+    <link rel="dns-prefetch" href="https://unpkg.com">
+
     <link rel="shortcut icon" href="/staticfiles/img/favicon.png">
-    <link href="{% static 'bootstrap/bootstrap.min.css' %}" rel="stylesheet" type="text/css" id="bootstrap-stylesheet" />
-    <link href="{% static 'assets/css/app.min.css' %}" rel="stylesheet" type="text/css" id="main-stylesheet" />
-    <link href="{% static 'bootstrap/bootstrap-dark.min.css' %}" rel="stylesheet" type="text/css" id="bootstrap-dark-stylesheet" />
-    <link href="{% static 'assets/css/app-dark.min.css' %}" rel="stylesheet" type="text/css" id="main-dark-stylesheet" />
-    <link href="{% static 'assets/css/icons.min.css' %}" rel="stylesheet" type="text/css" />
-    <link href="{% static 'plugins/snackbar/snackbar.min.css' %}" rel="stylesheet" type="text/css" />
-    <link href="{% static 'plugins/sweetalert2/sweetalert2.min.css' %}" rel="stylesheet" type="text/css" />
-    <link href="{% static 'plugins/switches/switches.min.css' %}" rel="stylesheet" type="text/css" />
-    <link href="{% static 'custom/custom.css' %}" rel="stylesheet" type="text/css" />
-    <link href="{% static 'custom/rengine-pro.css' %}" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    <link rel="stylesheet" type="text/css" href="{% static 'plugins/datatable/global.css' %}">
-    <!-- <link rel="stylesheet" type="text/css" href="{% static 'plugins/datatable/custom.css' %}"> -->
-    <link href="https://cdn.datatables.net/rowgroup/1.4.0/css/rowGroup.dataTables.min.css" rel="stylesheet" type="text/css" />
-    <style media="screen">
+
+    <!-- Critical CSS: bootstrap dark + app dark (renders dark immediately, no FOUC) -->
+    <link href="{% static 'bootstrap/bootstrap-dark.min.css' %}" rel="stylesheet" id="bootstrap-dark-stylesheet" />
+    <link href="{% static 'assets/css/app-dark.min.css' %}" rel="stylesheet" id="main-dark-stylesheet" />
+
+    <!-- Deferred non-critical CSS (light theme fallback, loaded async) -->
+    <link href="{% static 'bootstrap/bootstrap.min.css' %}" rel="stylesheet" media="print" onload="this.media='all'" id="bootstrap-stylesheet" />
+    <link href="{% static 'assets/css/app.min.css' %}" rel="stylesheet" media="print" onload="this.media='all'" id="main-stylesheet" />
+
+    <!-- Icons: subset only woff2, skip heavy EOT/SVG -->
+    <link href="{% static 'assets/css/icons.min.css' %}" rel="stylesheet" />
+
+    <!-- Plugin CSS: tiny, load inline -->
+    <link href="{% static 'plugins/snackbar/snackbar.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'plugins/sweetalert2/sweetalert2.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'plugins/switches/switches.min.css' %}" rel="stylesheet" />
+
+    <!-- Custom pro styles (critical, load sync) -->
+    <link href="{% static 'custom/custom.css' %}" rel="stylesheet" />
+    <link href="{% static 'custom/rengine-pro.css' %}" rel="stylesheet" />
+
+    <!-- Font Awesome: load async to not block render -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style"
+          onload="this.rel='stylesheet'" crossorigin="anonymous" />
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" /></noscript>
+
+    <!-- DataTables CSS: async load (not needed for initial paint) -->
+    <link rel="preload" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" as="style"
+          onload="this.rel='stylesheet'" />
+    <link rel="preload" href="https://cdn.datatables.net/rowgroup/1.4.0/css/rowGroup.dataTables.min.css" as="style"
+          onload="this.rel='stylesheet'" />
+    <link href="{% static 'plugins/datatable/global.css' %}" rel="stylesheet" />
+    <noscript>
+      <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+      <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.4.0/css/rowGroup.dataTables.min.css" />
+    </noscript>
+
+    <!-- Inline critical: font-face declarations (woff only, skip old EOT) -->
+    <style>
       @font-face {
-        font-family: "Cerebri Sans,sans-serif";
-        src: url("{% static 'fonts/cerebrisans-light.eot' %}");
+        font-family: "Cerebri Sans";
         src: local("Cerebri-sans Light"), url("{% static 'fonts/cerebrisans-light.woff' %}") format("woff");
-        font-weight: 300; }
-
+        font-weight: 300; font-display: swap; }
       @font-face {
-        font-family: "Cerebri Sans,sans-serif";
-        src: url("{% static 'fonts/cerebrisans-regular.eot' %}");
+        font-family: "Cerebri Sans";
         src: local("Cerebri-sans Regular"), url("{% static 'fonts/cerebrisans-regular.woff' %}") format("woff");
-        font-weight: 400; }
-
+        font-weight: 400; font-display: swap; }
       @font-face {
-        font-family: "Cerebri Sans,sans-serif";
-        src: url("{% static 'fonts/cerebrisans-medium.eot' %}");
+        font-family: "Cerebri Sans";
         src: local("Cerebri-sans Medium"), url("{% static 'fonts/cerebrisans-medium.woff' %}") format("woff");
-        font-weight: 500; }
-
+        font-weight: 500; font-display: swap; }
       @font-face {
-        font-family: "Cerebri Sans,sans-serif";
-        src: url("{% static 'fonts/cerebrisans-semibold.eot' %}");
+        font-family: "Cerebri Sans";
         src: local("Cerebri-sans Semibold"), url("{% static 'fonts/cerebrisans-semibold.woff' %}") format("woff");
-        font-weight: 600; }
-
+        font-weight: 600; font-display: swap; }
       @font-face {
-        font-family: "Cerebri Sans,sans-serif";
-        src: url("{% static 'fonts/cerebrisans-bold.eot' %}");
+        font-family: "Cerebri Sans";
         src: local("Cerebri-sans Bold"), url("{% static 'fonts/cerebrisans-bold.woff' %}") format("woff");
-        font-weight: 700; }
+        font-weight: 700; font-display: swap; }
+      /* Prevent FOUC on page load */
+      body.loading { visibility: visible; }
     </style>
-    <!-- load any page wise jquery or stylesheet -->
-    {% block custom_js_css_link %}
-    {% endblock custom_js_css_link %}
+
+    <!-- Page-level CSS/JS slots -->
+    {% block custom_js_css_link %}{% endblock custom_js_css_link %}
   </head>
 
   <body class="loading" data-layout-mode="horizontal" data-theme="dark">
-    <!-- Page load progress bar -->
-    <div class="page-loading-bar" id="page-load-bar" style="width:0%"></div>
-    <!-- Topbar begins -->
+    <!-- Thin top progress bar (no JS needed initially) -->
+    <div class="page-loading-bar" id="page-load-bar"></div>
+
+    <!-- Topbar -->
     {% include 'base/_items/top_bar.html' %}
-    {# topbar ends #}
-    <div id="wrapper"></div>
-      {# top nav begins #}
+
+    <!-- Main wrapper -->
+    <div id="wrapper">
+      <!-- Top navigation -->
       {% include 'base/_items/top_nav.html' %}
-      {# top nav ends #}
+
       <div class="content-page">
         <div class="content">
           <div class="container-fluid">
@@ -78,16 +103,14 @@
                 <div class="page-title-box">
                   <div class="page-title-right">
                     <ol class="breadcrumb m-0">
-                      {% block breadcrumb_title %}
-                      {% endblock breadcrumb_title %}
+                      {% block breadcrumb_title %}{% endblock breadcrumb_title %}
                     </ol>
                   </div>
                   <h4 class="page-title">{% block page_title %}{% endblock page_title %}</h4>
                 </div>
               </div>
             </div>
-            {% block main_content %}
-            {% endblock main_content %}
+            {% block main_content %}{% endblock main_content %}
           </div>
           <div id="additional-content"></div>
         </div>
@@ -95,192 +118,182 @@
         {% include 'base/_items/xl_scrollable_modal.html' %}
         {% include 'base/_items/offcanvas.html' %}
       </div>
+
       {% include 'base/_items/right_bar.html' %}
       {% include 'base/_items/footer.html' %}
     </div>
-    <script src="{% static 'assets/js/vendor.min.js' %}"></script>
-    <script src="https://unpkg.com/@popperjs/core@2"></script>
-    <script src="https://unpkg.com/tippy.js@6"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.8/purify.min.js"></script>
-    <script src="{% static 'assets/js/app.min.js' %}"></script>
-    <script src="{% static 'custom/custom.js' %}"></script>
-    <script src="{% static 'custom/rengine-pro.js' %}"></script>
-    <script src="{% static 'custom/toolbox.js' %}"></script>
-    <script src="{% static 'custom/right_sidebar.js' %}"></script>
-    <script src="{% static 'custom/port_display.js' %}"></script>
-    <script src="{% static 'plugins/snackbar/snackbar.min.js' %}"></script>
-    <script src="{% static 'plugins/sweetalert2/sweetalert2.all.min.js' %}"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/rowgroup/1.4.0/js/dataTables.rowGroup.min.js"></script>
-    <script type="text/javascript">
-      $(document).ready(function(){
-        // for tabs with urls, we need to append the hash in the url
-        $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
-          var href = $(e.target).attr('href');
-          if (href && href.startsWith('#')) {
-            history.pushState(null, null, href);
-          }
+
+    <!-- =========================================================
+         SCRIPTS — all deferred so they never block rendering
+         ========================================================= -->
+
+    <!-- Core: vendor bundle (jQuery + Bootstrap) — defer -->
+    <script src="{% static 'assets/js/vendor.min.js' %}" defer></script>
+
+    <!-- Popperjs + Tippy: defer, self-hosted mirror preferred but CDN with defer is fine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.6/umd/popper.min.js" defer crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tippy.js/6.3.7/tippy-bundle.umd.min.js" defer crossorigin="anonymous"></script>
+
+    <!-- DOMPurify -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.8/purify.min.js" defer crossorigin="anonymous"></script>
+
+    <!-- App + custom scripts — all deferred -->
+    <script src="{% static 'assets/js/app.min.js' %}" defer></script>
+    <script src="{% static 'custom/custom.js' %}" defer></script>
+    <script src="{% static 'custom/rengine-pro.js' %}" defer></script>
+    <script src="{% static 'custom/toolbox.js' %}" defer></script>
+    <script src="{% static 'custom/right_sidebar.js' %}" defer></script>
+    <script src="{% static 'custom/port_display.js' %}" defer></script>
+
+    <!-- Plugins: defer -->
+    <script src="{% static 'plugins/snackbar/snackbar.min.js' %}" defer></script>
+    <script src="{% static 'plugins/sweetalert2/sweetalert2.all.min.js' %}" defer></script>
+
+    <!-- DataTables: defer -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js" defer></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js" defer></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.4.0/js/dataTables.rowGroup.min.js" defer></script>
+
+    <!-- App initialisation (runs after defer scripts execute in order) -->
+    <script defer>
+      document.addEventListener('DOMContentLoaded', function () {
+        // Tab URL hash support
+        document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(function (el) {
+          el.addEventListener('shown.bs.tab', function (e) {
+            var href = e.target.getAttribute('href');
+            if (href && href.startsWith('#')) history.pushState(null, null, href);
+          });
         });
-        $(window).on('hashchange', handleHashInUrl);
-        render_search_history('{{current_project.slug}}');
 
-        // reNgine-ng will also check everyday if update exists for reNgine-ng
-        checkForUpdates(false);
+        window.addEventListener('hashchange', handleHashInUrl);
+        if (typeof render_search_history === 'function') render_search_history('{{current_project.slug}}');
+        if (typeof checkForUpdates === 'function') checkForUpdates(false);
+        if (typeof getScanStatusSidebar === 'function') {
+          getScanStatusSidebar(
+            '{% url 'api:scan_status' %}',
+            '{% url 'api:stop_scan' %}',
+            '{% url 'api:fetch_subscan_results' %}',
+            project='{{current_project.slug}}',
+            reload=false
+          );
+        }
+        // Dark mode preference
+        var theme = localStorage.getItem('rengine-theme');
+        var check = document.getElementById('dark-mode-check');
+        if (check) check.checked = (theme === 'dark');
+        if (typeof handleHashInUrl === 'function') handleHashInUrl();
 
-        getScanStatusSidebar('{% url 'api:scan_status' %}', '{% url 'api:stop_scan' %}', '{% url 'api:fetch_subscan_results' %}', project='{{current_project.slug}}', reload=false);
-        if (localStorage.getItem('rengine-theme') == "dark") {
-          $('#dark-mode-check').prop("checked", true).change();
-        }
-        else{
-          $('#dark-mode-check').prop("checked", false).change();
-        }
-        handleHashInUrl();
+        // Tippy
+        if (typeof tippy === 'function') tippy('.top-activity-counter', { content: 'Scan Activity' });
       });
 
-      function render_search_history(slug){
+      function render_search_history(slug) {
         fetch('/api/search/history/')
-        .then(response => response.json())
-        .then(function (response) {
-          if (response.status) {
-            for (var history in response.results) {
-              $('#search-history-items').append(`
-                <a href="{% url 'search' %}?query=${response.results[history].query}" class="dropdown-item notify-item">
-                  <span>${response.results[history].query}</span>
-                </a>
-              `);
+          .then(function (r) { return r.json(); })
+          .then(function (response) {
+            var el = document.getElementById('search-history-items');
+            if (!el) return;
+            if (response.status) {
+              response.results.forEach(function (h) {
+                el.insertAdjacentHTML('beforeend',
+                  '<a href="{% url 'search' %}?query=' + encodeURIComponent(h.query) + '" class="dropdown-item notify-item"><span>' + h.query + '</span></a>');
+              });
+            } else {
+              el.insertAdjacentHTML('beforeend', '<span class="ms-2">No recent searches.</span>');
             }
-          }
-          else{
-            $('#search-history-items').append(`
-              <span class="ms-2">No recent searches.</span>
-            `);
-          }
-        });
+          });
       }
 
-      // main function to check for updates
-      function checkForUpdates(showUI = false) {
-        const updateAvailable = window.localStorage.getItem('update_available') === 'true';
-        
-        // Hide the default badge
-        $('.rengine_update_available').hide();
-        
-        if (updateAvailable) {
-          // if an update was marked as available, check if it's still the case
-          checkUpdateFromAPI(showUI);
-        } else if (hasOneDayPassed()) {
-          // no update known, check once per day
-          checkUpdateFromAPI(showUI);
-        } else if (showUI) {
-          // if we force the check via the menu
-          checkUpdateFromAPI(true);
-        }
+      function checkForUpdates(showUI) {
+        var updateAvailable = window.localStorage.getItem('update_available') === 'true';
+        document.querySelectorAll('.rengine_update_available').forEach(function (e) { e.style.display = 'none'; });
+        if (updateAvailable || hasOneDayPassed() || showUI) checkUpdateFromAPI(showUI);
       }
 
       function checkUpdateFromAPI(showLoadingScreen) {
-        if (showLoadingScreen) {
-          Swal.fire({
-            title: 'Checking reNgine-ng latest version...',
-            allowOutsideClick: false
-          });
-          swal.showLoading();
+        if (showLoadingScreen && typeof Swal !== 'undefined') {
+          Swal.fire({ title: 'Checking reNgine-ng latest version...', allowOutsideClick: false });
+          Swal.showLoading();
         }
-        
         fetch('/api/rengine/update/')
-          .then(response => response.json())
+          .then(function (r) { return r.json(); })
           .then(function (response) {
-            if (showLoadingScreen) {
-              swal.close();
-            }
-            
-            if (response['description'] == 'RateLimited') {
-              if (showLoadingScreen) {
-                Swal.fire({
-                  title: 'Oops!',
-                  text: 'Github rate limit exceeded, please try again in an hour!',
-                  icon: 'error'
-                });
+            if (showLoadingScreen && typeof Swal !== 'undefined') Swal.close();
+            if (response['description'] === 'RateLimited') {
+              if (showLoadingScreen && typeof Swal !== 'undefined') {
+                Swal.fire({ title: 'Oops!', text: 'Github rate limit exceeded, please try again later.', icon: 'error' });
               }
               window.localStorage.setItem('update_available', false);
-              $('.rengine_update_available').hide();
-            }
-            else if (response['update_available']) {
+            } else if (response['update_available']) {
               window.localStorage.setItem('update_available', true);
               window.localStorage.setItem('latest_version', response['latest_version']);
               window.localStorage.setItem('changelog', response['changelog']);
-              $('.rengine_update_available').show();
-              if (showLoadingScreen) {
-                showUpdateAvailable(response['latest_version'], response['changelog']);
-              }
-            }
-            else {
-              if (showLoadingScreen) {
-                Swal.fire({
-                  title: 'Update not available',
-                  text: 'You are running the latest version of reNgine-ng!',
-                  icon: 'info'
-                });
+              document.querySelectorAll('.rengine_update_available').forEach(function (e) { e.style.display = ''; });
+              if (showLoadingScreen) showUpdateAvailable(response['latest_version'], response['changelog']);
+            } else {
+              if (showLoadingScreen && typeof Swal !== 'undefined') {
+                Swal.fire({ title: 'Up to date', text: 'You are running the latest version!', icon: 'info' });
               }
               window.localStorage.setItem('update_available', false);
               window.localStorage.removeItem('latest_version');
               window.localStorage.removeItem('changelog');
-              $('.rengine_update_available').hide();
             }
-          });
+          }).catch(function () { /* silent fail */ });
       }
 
-      function showUpdateAvailable(latest_version_number, changelog) {
+      function showUpdateAvailable(ver, changelog) {
+        if (typeof Swal === 'undefined') return;
         Swal.fire({
           title: 'Update Available!',
-          html: `<h5>reNgine-ng's new update ${latest_version_number} is available, please follow the update instructions.</h5><pre>${changelog}</pre>`,
-          icon: 'info',
-          confirmButtonText: 'Update Instructions',
-          showCancelButton: true,
-          cancelButtonText: 'Dismiss',
-          width: '60%',
-        }).then((result) => {
-          if (result.isConfirmed) {
-            window.open("https://github.com/Security-Tools-Alliance/rengine-ng/wiki/Installation#-updating-rengine-ng","_blank")
-          }
+          html: '<h5>reNgine-ng ' + ver + ' is available.</h5><pre>' + changelog + '</pre>',
+          icon: 'info', confirmButtonText: 'Update Instructions',
+          showCancelButton: true, cancelButtonText: 'Dismiss', width: '60%',
+        }).then(function (r) {
+          if (r.isConfirmed) window.open('https://github.com/Security-Tools-Alliance/rengine-ng/wiki/Installation#-updating-rengine-ng', '_blank');
         });
       }
 
       function hasOneDayPassed() {
-        const date = new Date().toLocaleDateString();
-        const lastChecked = window.localStorage.getItem('last_update_checked');
-        
-        if (lastChecked === date) {
-          return false;
-        }
-        
+        var date = new Date().toLocaleDateString();
+        var last = window.localStorage.getItem('last_update_checked');
+        if (last === date) return false;
         window.localStorage.setItem('last_update_checked', date);
         return true;
       }
+    </script>
 
-      // tippy for notification or scan activity
-      tippy('.top-activity-counter', {
-        content: 'Scan Activity',
+    <!-- Flash messages via Snackbar (deferred inline) -->
+    {% if messages %}
+      <script defer>
+        document.addEventListener('DOMContentLoaded', function () {
+          {% for message in messages %}
+            if (typeof Snackbar !== 'undefined') {
+              Snackbar.show({
+                text: '{{ message }}',
+                pos: 'top-right',
+                {% if message.tags == 'error' %}actionTextColor:'#fff', backgroundColor:'#e7515a',{% else %}actionTextColor:'#42A5F5',{% endif %}
+                duration: 2500
+              });
+            }
+          {% endfor %}
+        });
+      </script>
+    {% endif %}
+
+    <!-- Mobile nav: lock/unlock body scroll when drawer opens/closes -->
+    <script defer>
+      document.addEventListener('DOMContentLoaded', function () {
+        var mobileMenu = document.getElementById('mobileNavMenu');
+        if (!mobileMenu) return;
+        mobileMenu.addEventListener('show.bs.collapse', function () {
+          document.body.classList.add('mobile-nav-open');
+        });
+        mobileMenu.addEventListener('hide.bs.collapse', function () {
+          document.body.classList.remove('mobile-nav-open');
+        });
       });
     </script>
-    {% if messages %}
-      {% for message in messages %}
-        <script type="text/javascript">
-          Snackbar.show({
-            text: '{{ message }}',
-            pos: 'top-right',
-            {% if message.tags == 'error'%}
-              actionTextColor: '#fff',
-              backgroundColor: '#e7515a',
-            {% else %}
-            actionTextColor: '#42A5F5',
-            {% endif %}
-            duration: 2500
-          });
-        </script>
-      {% endfor %}
-    {% endif %}
-    {% block page_level_script %}
-    {% endblock page_level_script%}
+
+    {% block page_level_script %}{% endblock page_level_script %}
   </body>
 </html>

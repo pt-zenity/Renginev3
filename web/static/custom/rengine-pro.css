@@ -1639,14 +1639,311 @@ mark {
 }
 
 /* ============================================================
-   RESPONSIVE ADJUSTMENTS
+   RESPONSIVE — MOBILE FIRST
+   Breakpoints: xs <576  sm 576  md 768  lg 992  xl 1200
    ============================================================ */
 
-@media (max-width: 768px) {
+/* ── Disable heavy grid overlay on mobile (saves paint) ─────── */
+@media (max-width: 767px) {
+  body::before { display: none; }
+  body {
+    background-attachment: scroll !important; /* fixed causes jank on iOS */
+  }
+}
+
+/* ── Navbar ──────────────────────────────────────────────────── */
+@media (max-width: 991px) {
+  .navbar-custom {
+    padding: 0 12px !important;
+    min-height: 54px;
+  }
+  .text-sm-logo, .text-lg-logo { font-size: 16px !important; }
+  /* Hide search bar text on small screens, keep icon */
+  .app-search .form-control { display: none !important; }
+  .app-search .btn {
+    border-radius: 8px !important;
+    border: 1px solid var(--rg-border) !important;
+  }
+  /* Tighten nav icon spacing */
+  .topnav-menu .nav-link { padding: 6px 8px !important; }
+}
+
+/* ── Horizontal top nav → hidden on mobile ───────────────────── */
+@media (max-width: 991px) {
+  .topnav { display: none !important; }
+  /* Mobile menu drawer shown via hamburger */
+  .mobile-nav-collapse {
+    display: block !important;
+    background: var(--rg-bg-card);
+    border-bottom: 1px solid var(--rg-border);
+    padding: 8px 0;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  }
+  .mobile-nav-collapse .navbar-nav .nav-link {
+    color: var(--rg-text-secondary) !important;
+    padding: 11px 20px !important;
+    font-size: 0.9rem !important;
+    border-left: 3px solid transparent;
+    transition: var(--rg-transition) !important;
+  }
+  .mobile-nav-collapse .navbar-nav .nav-link:hover,
+  .mobile-nav-collapse .navbar-nav .nav-link.active {
+    background: rgba(59,130,246,.08) !important;
+    border-left-color: var(--rg-accent-blue) !important;
+    color: var(--rg-accent-blue) !important;
+  }
+  .mobile-nav-collapse .dropdown-menu {
+    position: static !important;
+    float: none !important;
+    box-shadow: none !important;
+    background: rgba(0,0,0,.25) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 0 4px 0 !important;
+    animation: none !important;
+  }
+  .mobile-nav-collapse .dropdown-item {
+    padding: 9px 20px 9px 36px !important;
+    font-size: 0.85rem !important;
+    border-left: 3px solid transparent;
+  }
+  .mobile-nav-collapse .dropdown-item:hover {
+    border-left-color: var(--rg-accent-cyan) !important;
+    background: rgba(59,130,246,.07) !important;
+  }
+  /* Hamburger icon lines */
+  .navbar-toggler {
+    border: 1px solid var(--rg-border) !important;
+    background: rgba(255,255,255,.04) !important;
+    border-radius: 8px !important;
+    padding: 6px 10px !important;
+    cursor: pointer;
+  }
+  .navbar-toggler .lines span {
+    display: block;
+    width: 22px; height: 2px;
+    background: var(--rg-text-secondary);
+    border-radius: 2px;
+    margin: 4px 0;
+    transition: var(--rg-transition);
+  }
+  .navbar-toggler[aria-expanded="true"] .lines span:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+  }
+  .navbar-toggler[aria-expanded="true"] .lines span:nth-child(2) {
+    opacity: 0;
+  }
+  .navbar-toggler[aria-expanded="true"] .lines span:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+  }
+}
+
+/* ── Content padding ─────────────────────────────────────────── */
+@media (max-width: 575px) {
+  .content { padding: 10px !important; }
+  .content-page { padding-top: 54px !important; } /* below sticky navbar */
+  .container-fluid { padding-left: 10px !important; padding-right: 10px !important; }
+  .page-title-box { padding: 8px 0 12px !important; }
+  .page-title { font-size: 1.1rem !important; }
+}
+
+@media (min-width: 576px) and (max-width: 767px) {
+  .content { padding: 12px 16px !important; }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  .content { padding: 16px 20px !important; }
+}
+
+/* ── Cards ───────────────────────────────────────────────────── */
+@media (max-width: 575px) {
+  .card { border-radius: 10px !important; margin-bottom: 12px !important; }
   .card-body { padding: 14px !important; }
-  .content { padding: 12px !important; }
+  .card-header { padding: 12px 14px !important; }
+  .card:hover { transform: none !important; } /* disable lift on touch */
+}
+
+@media (min-width: 576px) and (max-width: 767px) {
+  .card-body { padding: 16px !important; }
+}
+
+/* ── Stat numbers ────────────────────────────────────────────── */
+@media (max-width: 575px) {
+  .stat-number, [data-plugin="counterup"],
+  .stat-big-number { font-size: 1.5rem !important; }
+  .stat-icon-box { width: 44px !important; height: 44px !important; font-size: 1.2rem !important; }
+}
+
+@media (min-width: 576px) and (max-width: 767px) {
+  .stat-number { font-size: 1.7rem !important; }
+}
+
+/* ── Tables: make scrollable horizontally ────────────────────── */
+@media (max-width: 767px) {
+  .table-responsive-mobile {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  /* Auto-wrap all datatables on mobile */
+  .dataTables_wrapper { overflow-x: auto !important; }
+  .table thead th {
+    padding: 10px 10px !important;
+    font-size: 0.68rem !important;
+    white-space: nowrap;
+  }
+  .table tbody td {
+    padding: 8px 10px !important;
+    font-size: 0.8rem !important;
+  }
+  /* Stack datatables controls */
+  .dataTables_wrapper .dataTables_length,
+  .dataTables_wrapper .dataTables_filter {
+    float: none !important;
+    text-align: left !important;
+    margin-bottom: 8px !important;
+  }
+  .dataTables_wrapper .dataTables_filter input { width: 100% !important; max-width: 100% !important; }
+  .dataTables_wrapper div.dataTables_filter input:focus { width: 100% !important; }
+}
+
+/* ── Modals ──────────────────────────────────────────────────── */
+@media (max-width: 575px) {
+  .modal-dialog {
+    margin: 8px !important;
+    max-width: calc(100vw - 16px) !important;
+  }
   .modal-body { padding: 16px !important; }
-  .stat-number { font-size: 1.6rem !important; }
+  .modal-header { padding: 14px 16px !important; }
+  .modal-footer { padding: 12px 16px !important; flex-wrap: wrap; gap: 8px; }
+  .modal-footer .btn { flex: 1 1 auto; min-width: 100px; }
+  .modal-title { font-size: 0.95rem !important; }
+}
+
+/* ── Buttons: full-width on xs ───────────────────────────────── */
+@media (max-width: 575px) {
+  .btn-mobile-full { width: 100% !important; display: block !important; }
+  /* Reduce padding to fit on small screens */
+  .btn { padding: 8px 14px !important; font-size: 0.82rem !important; }
+  .btn-sm { padding: 5px 10px !important; font-size: 0.78rem !important; }
+}
+
+/* ── Forms ───────────────────────────────────────────────────── */
+@media (max-width: 575px) {
+  .form-control, .form-select,
+  input[type="text"], input[type="email"],
+  input[type="password"], input[type="search"],
+  textarea {
+    font-size: 1rem !important; /* prevents iOS zoom on focus */
+    padding: 10px 12px !important;
+  }
+  /* Full-width selects */
+  .select2-container { width: 100% !important; }
+}
+
+/* ── Row cols responsive fix ─────────────────────────────────── */
+@media (max-width: 575px) {
+  .row > [class^="col-"] { margin-bottom: 10px; }
+  /* Force single-column stat cards on very small screens */
+  .row.row-cols-auto > * { flex: 0 0 100% !important; max-width: 100% !important; }
+}
+
+/* ── Page title box ──────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .page-title-box {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .page-title-right { margin-top: 4px; }
+  .breadcrumb { font-size: 0.75rem !important; }
+}
+
+/* ── Tabs: scrollable on mobile ──────────────────────────────── */
+@media (max-width: 767px) {
+  .nav-tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--rg-border) !important;
+    padding-bottom: 1px;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tabs .nav-link {
+    white-space: nowrap !important;
+    padding: 8px 14px !important;
+    font-size: 0.8rem !important;
+    flex-shrink: 0;
+  }
+}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+@media (max-width: 575px) {
+  .footer { text-align: center !important; padding: 10px !important; }
+  .footer .float-end, .footer .float-right { float: none !important; }
+}
+
+/* ── Right sidebar: full-width on mobile ─────────────────────── */
+@media (max-width: 767px) {
+  .right-bar { width: 100% !important; right: -100% !important; }
+  .right-bar-enabled .right-bar { right: 0 !important; }
+}
+
+/* ── Offcanvas: full-width on mobile ─────────────────────────── */
+@media (max-width: 575px) {
+  .offcanvas { width: 100% !important; max-width: 100% !important; }
+}
+
+/* ── Code/pre: horizontal scroll ────────────────────────────── */
+@media (max-width: 767px) {
+  pre { max-height: 260px; overflow-y: auto; font-size: 0.78rem !important; }
+}
+
+/* ── Typography scale down ───────────────────────────────────── */
+@media (max-width: 575px) {
+  h1 { font-size: 1.5rem !important; }
+  h2 { font-size: 1.3rem !important; }
+  h3 { font-size: 1.15rem !important; }
+  h4 { font-size: 1.05rem !important; }
+  h5 { font-size: 0.95rem !important; }
+}
+
+/* ── Charts: fill container width on mobile ──────────────────── */
+@media (max-width: 767px) {
+  .apexcharts-canvas { max-width: 100% !important; }
+  #jvectormap-world-mill-en { height: 200px !important; }
+}
+
+/* ── SweetAlert2 ─────────────────────────────────────────────── */
+@media (max-width: 575px) {
+  .swal2-popup { width: 92vw !important; padding: 20px 16px !important; }
+}
+
+/* ── DataTable search expand fix ─────────────────────────────── */
+@media (min-width: 768px) {
+  div.dataTables_wrapper div.dataTables_filter input { width: 200px; }
+  div.dataTables_wrapper div.dataTables_filter input:focus { width: 300px; }
+}
+
+/* ── Touch target minimum size ───────────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* mobile touch devices */
+  .btn, .nav-link, .dropdown-item,
+  .navbar-toggler { min-height: 44px; min-width: 44px; }
+  .dropdown-item { min-height: 44px; display: flex !important; align-items: center !important; }
+  /* No hover-lift on touch */
+  .card:hover { transform: none !important; box-shadow: var(--rg-shadow-md) !important; }
+  .btn-primary:hover { transform: none !important; }
+  .btn-danger:hover  { transform: none !important; }
+  /* Larger scrollbar on touch */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+}
+
+/* ── Landscape phone specific ────────────────────────────────── */
+@media (max-height: 500px) and (max-width: 900px) {
+  .navbar-custom { min-height: 46px; }
+  .content { padding: 8px !important; }
 }
 
 /* ============================================================
@@ -1849,4 +2146,268 @@ hr {
   letter-spacing: 0.07em !important;
   color: var(--rg-text-muted) !important;
   font-weight: 600 !important;
+}
+
+/* ============================================================
+   MOBILE NAV DRAWER  (new collapse-based design)
+   ============================================================ */
+
+/* The collapse panel wraps the drawer */
+#mobileNavMenu {
+  position: relative;
+  z-index: 1029; /* below modal but above content */
+}
+
+.mobile-nav-drawer {
+  background: var(--rg-bg-card);
+  border-bottom: 1px solid var(--rg-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  padding: 6px 0 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Project badge at top */
+.mobile-nav-project-badge {
+  display: flex;
+  align-items: center;
+  padding: 10px 18px;
+  background: rgba(59, 130, 246, 0.08);
+  border-bottom: 1px solid var(--rg-border);
+  color: var(--rg-accent-blue);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+/* Every top-level nav item */
+.mobile-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px;
+  color: var(--rg-text-secondary) !important;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none !important;
+  border-left: 3px solid transparent;
+  transition: var(--rg-transition);
+  background: none;
+  border-top: none;
+  border-right: none;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.06);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  min-height: 44px; /* touch target */
+}
+
+.mobile-nav-link:hover,
+.mobile-nav-link:focus {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border-left-color: var(--rg-accent-blue) !important;
+  color: var(--rg-accent-blue) !important;
+  outline: none;
+}
+
+.mobile-nav-link.active {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border-left-color: var(--rg-accent-blue) !important;
+  color: var(--rg-accent-blue) !important;
+}
+
+/* Toggle buttons — chevron rotates when open */
+.mobile-nav-toggle {
+  justify-content: space-between;
+}
+
+.mobile-nav-toggle[aria-expanded="true"] {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border-left-color: var(--rg-accent-blue) !important;
+  color: var(--rg-accent-blue) !important;
+}
+
+.mobile-nav-chevron {
+  transition: transform 0.25s ease;
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.mobile-nav-toggle[aria-expanded="true"] .mobile-nav-chevron {
+  transform: rotate(90deg);
+}
+
+/* Sub-menu panel */
+.mobile-nav-submenu {
+  background: rgba(0, 0, 0, 0.2);
+  border-left: 3px solid rgba(59, 130, 246, 0.2);
+  margin: 0;
+  padding: 2px 0;
+}
+
+.mobile-nav-sublink {
+  display: block;
+  padding: 10px 18px 10px 28px;
+  color: var(--rg-text-muted) !important;
+  font-size: 0.85rem;
+  text-decoration: none !important;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.04);
+  transition: var(--rg-transition);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.mobile-nav-sublink:hover,
+.mobile-nav-sublink:focus {
+  background: rgba(59, 130, 246, 0.08) !important;
+  color: var(--rg-accent-blue) !important;
+  padding-left: 32px;
+}
+
+.mobile-nav-sublink.active {
+  color: var(--rg-accent-blue) !important;
+  background: rgba(59, 130, 246, 0.08) !important;
+  font-weight: 600;
+}
+
+/* Extras row at the bottom (quick actions) */
+.mobile-nav-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 18px 4px;
+  border-top: 1px solid var(--rg-border);
+  margin-top: 4px;
+}
+
+.mobile-nav-extra-btn {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid var(--rg-border);
+  border-radius: 8px;
+  color: var(--rg-text-secondary);
+  font-size: 0.8rem;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: var(--rg-transition);
+  min-height: 36px;
+}
+
+.mobile-nav-extra-btn:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--rg-accent-blue);
+  border-color: var(--rg-accent-blue);
+}
+
+/* Hamburger toggler lines */
+.navbar-toggler {
+  border: 1px solid var(--rg-border) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+  cursor: pointer;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.navbar-toggler .lines span {
+  display: block;
+  width: 22px; height: 2px;
+  background: var(--rg-text-secondary);
+  border-radius: 2px;
+  margin: 4px 0;
+  transition: var(--rg-transition);
+}
+
+.navbar-toggler[aria-expanded="true"] .lines span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+.navbar-toggler[aria-expanded="true"] .lines span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.navbar-toggler[aria-expanded="true"] .lines span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* ── Only show drawer on mobile; hide on desktop ─────────────── */
+@media (min-width: 992px) {
+  #mobileNavMenu { display: none !important; }
+}
+
+/* ── Drawer full-width on mobile ─────────────────────────────── */
+@media (max-width: 991px) {
+  .mobile-nav-drawer { border-radius: 0; }
+}
+
+/* ── On very small screens stack extras vertically ───────────── */
+@media (max-width: 380px) {
+  .mobile-nav-extras { flex-direction: column; }
+  .mobile-nav-extra-btn { width: 100%; }
+}
+
+/* ── Navbar row gap/padding on mobile ─────────────────────────── */
+@media (max-width: 575px) {
+  .navbar-custom .row { flex-wrap: nowrap; }
+  /* Ensure logo doesn't overflow */
+  .text-logo { font-size: 15px !important; }
+  .text-logo small { font-size: 0.55em !important; }
+}
+
+/* ── Remove old .mobile-nav-menu / .mobile-submenu styles ──────── */
+.mobile-nav-menu { display: none !important; }
+
+/* ── Login page: reduce heavy animations on mobile ────────────── */
+@media (max-width: 767px) {
+  /* Disable big blurred orbs — too expensive on low-end phones */
+  .orb { display: none !important; }
+  /* Disable scan-line animation */
+  .scan-line { display: none !important; }
+  /* Disable particles */
+  .particle { display: none !important; }
+  /* Disable bg grid */
+  .bg-grid { display: none !important; }
+  /* Login card: reduce padding + blur */
+  .login-card {
+    padding: 28px 20px !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+  /* Reduce card entrance animation */
+  @keyframes cardSlideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  /* Disable login card inner glow */
+  .login-card::after { display: none !important; }
+  /* Login title font size */
+  .login-title { font-size: 1.4rem !important; }
+  /* Inputs: 16px font to prevent iOS zoom */
+  .form-input { font-size: 1rem !important; }
+}
+
+/* ── Prevent iOS body scroll when nav drawer is open ──────────── */
+body.mobile-nav-open {
+  overflow: hidden;
+}
+
+/* ── Ensure topnav horizontal menu hidden on tablet/mobile ──────── */
+@media (max-width: 991px) {
+  .topnav { display: none !important; }
+}
+
+/* ── Content-page top padding accounts for sticky navbar ─────── */
+@media (max-width: 991px) {
+  .content-page {
+    padding-top: 0 !important; /* sticky navbar handles spacing */
+  }
+}
+
+/* ── Improve .app-search on medium screens ───────────────────── */
+@media (min-width: 768px) and (max-width: 991px) {
+  .app-search .form-control {
+    width: 160px !important;
+    display: block !important;
+  }
 }

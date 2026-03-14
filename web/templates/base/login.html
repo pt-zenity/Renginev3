@@ -4,18 +4,34 @@
 <head>
   <meta charset="utf-8" />
   <title>reNgine-ng — Login</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="csrf-token" content="{{ csrf_token }}">
-  <link href="{% static 'bootstrap/bootstrap-dark.min.css' %}" rel="stylesheet" type="text/css" />
-  <link href="{% static 'assets/css/app-dark.min.css' %}" rel="stylesheet" type="text/css" />
-  <link href="{% static 'assets/css/icons.min.css' %}" rel="stylesheet" type="text/css" />
+  <meta name="theme-color" content="#0a0e1a">
   <link rel="shortcut icon" href="/staticfiles/img/favicon.png">
-  <!-- Google Fonts -->
+
+  <!-- Critical CSS: Bootstrap dark + icons (blocking is fine, they're small) -->
+  <link href="{% static 'bootstrap/bootstrap-dark.min.css' %}" rel="stylesheet" />
+  <link href="{% static 'assets/css/app-dark.min.css' %}" rel="stylesheet" />
+  <link href="{% static 'assets/css/icons.min.css' %}" rel="stylesheet" />
+
+  <!-- Google Fonts: async so they never block render -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <!-- FontAwesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
+  <link rel="preload" as="style"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        onload="this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+  </noscript>
+
+  <!-- FontAwesome: async -->
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preload" as="style"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        onload="this.rel='stylesheet'" crossorigin="anonymous">
+  <noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+  </noscript>
 
   <style>
     /* ── Core Variables ── */
@@ -494,6 +510,64 @@
     .tag-scan   { background: rgba(59,130,246,0.12);  border: 1px solid rgba(59,130,246,0.25);  color: #60a5fa; }
     .tag-vuln   { background: rgba(239,68,68,0.12);   border: 1px solid rgba(239,68,68,0.25);   color: #f87171; }
     .tag-report { background: rgba(16,185,129,0.12);  border: 1px solid rgba(16,185,129,0.25);  color: #34d399; }
+
+    /* ── Mobile responsive ── */
+    @media (max-width: 575px) {
+      body { overflow: auto; } /* allow scroll on small phones */
+
+      /* Kill heavy background animations on small screens */
+      .orb, .scan-line, .particle, .bg-grid { display: none !important; }
+
+      .login-container { padding: 12px; align-items: flex-start; padding-top: 24px; }
+
+      .login-card {
+        padding: 28px 18px !important;
+        border-radius: 16px !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        max-width: 100%;
+      }
+
+      .login-title { font-size: 1.4rem !important; }
+      .login-logo-icon { width: 52px; height: 52px; font-size: 1.5rem; }
+
+      /* Larger inputs for easy tapping */
+      .form-input {
+        font-size: 1rem !important; /* prevents iOS auto-zoom */
+        padding: 13px 14px 13px 40px !important;
+      }
+
+      .btn-login { padding: 14px !important; font-size: 1rem !important; }
+
+      /* Reduce tag strip on small screens */
+      .tag-strip { gap: 4px; margin-bottom: 18px; }
+      .tag { font-size: 0.62rem; padding: 2px 8px; }
+    }
+
+    @media (max-width: 360px) {
+      .login-card { padding: 22px 14px !important; }
+      .login-header { margin-bottom: 20px; }
+      .tag-strip { display: none; } /* hide on very small screens */
+    }
+
+    /* Landscape phone — compact layout */
+    @media (max-height: 600px) and (orientation: landscape) {
+      .orb, .scan-line, .particle { display: none !important; }
+      .login-logo-icon { width: 44px; height: 44px; margin-bottom: 8px; }
+      .login-header { margin-bottom: 16px; }
+      .tag-strip { display: none; }
+      .system-status { margin-bottom: 12px; }
+      .form-group { margin-bottom: 12px; }
+      .login-card { padding: 20px !important; }
+    }
+
+    /* Prefers reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .orb, .scan-line, .particle { animation: none !important; }
+      .login-card { animation: none !important; opacity: 1 !important; transform: none !important; }
+      .login-logo-icon { animation: none !important; }
+      .status-dot { animation: none !important; }
+    }
   </style>
 </head>
 
@@ -662,7 +736,7 @@
     });
   </script>
 
-  <script src="{% static 'assets/js/vendor.min.js' %}"></script>
+  <script src="{% static 'assets/js/vendor.min.js' %}" defer></script>
   <!-- app.min.js skipped on login — it requires navbar elements not present here -->
 </body>
 </html>
