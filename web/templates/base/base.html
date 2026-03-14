@@ -36,6 +36,8 @@
     <!-- Custom pro styles (critical, load sync) -->
     <link href="{% static 'custom/custom.css' %}" rel="stylesheet" />
     <link href="{% static 'custom/rengine-pro.css' %}" rel="stylesheet" />
+    <!-- Color theme override (only changes CSS variables/colors, no layout impact) -->
+    <link href="{% static 'custom/rengine-theme.css' %}" rel="stylesheet" />
 
     <!-- Font Awesome: load async to not block render -->
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style"
@@ -280,7 +282,19 @@
       </script>
     {% endif %}
 
-    <!-- Mobile nav scroll-lock is handled in rengine-pro.js (initMobileNav) -->
+    <!-- Mobile nav: lock/unlock body scroll when drawer opens/closes -->
+    <script defer>
+      document.addEventListener('DOMContentLoaded', function () {
+        var mobileMenu = document.getElementById('mobileNavMenu');
+        if (!mobileMenu) return;
+        mobileMenu.addEventListener('show.bs.collapse', function () {
+          document.body.classList.add('mobile-nav-open');
+        });
+        mobileMenu.addEventListener('hide.bs.collapse', function () {
+          document.body.classList.remove('mobile-nav-open');
+        });
+      });
+    </script>
 
     {% block page_level_script %}{% endblock page_level_script %}
   </body>

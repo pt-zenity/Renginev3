@@ -1,0 +1,72 @@
+/* ============================================================
+   reNgine-ng  —  Custom Color Theme Override
+   Only colors are changed here. Layout, padding, and structure
+   remain exactly as the original reNgine-ng defaults.
+   ============================================================ */
+
+/* ---- Override CSS color variables only ---- */
+:root {
+  /* Core background - slightly deeper navy */
+  --rg-bg-primary:       #080c18;
+  --rg-bg-secondary:     #0b0f1e;
+  --rg-bg-card:          #0f1624;
+  --rg-bg-card-hover:    #161e30;
+  --rg-bg-sidebar:       #0a0e1c;
+  --rg-bg-navbar:        rgba(8, 12, 24, 0.97);
+
+  /* Accent - slightly brighter blue/cyan */
+  --rg-accent-blue:      #4f9cf9;
+  --rg-accent-cyan:      #08cfe0;
+  --rg-accent-green:     #12d896;
+  --rg-accent-purple:    #9b6ff8;
+  --rg-accent-orange:    #ffad1f;
+  --rg-accent-red:       #f85555;
+
+  /* Glow */
+  --rg-glow-blue:        rgba(79, 156, 249, 0.45);
+  --rg-glow-cyan:        rgba(8, 207, 224, 0.4);
+  --rg-glow-green:       rgba(18, 216, 150, 0.4);
+  --rg-glow-red:         rgba(248, 85, 85, 0.4);
+  --rg-glow-purple:      rgba(155, 111, 248, 0.4);
+
+  /* Severity */
+  --rg-critical:         #ff3b4e;
+  --rg-high:             #ff5e28;
+  --rg-medium:           #ffb300;
+  --rg-low:              #f0d060;
+  --rg-info:             #6cb2ff;
+  --rg-unknown:          #9ab0c0;
+
+  /* Text */
+  --rg-text-primary:     #eaf0fb;
+  --rg-text-secondary:   #9aaec4;
+  --rg-text-muted:       #5a7090;
+  --rg-text-accent:      #40c8f0;
+
+  /* Borders */
+  --rg-border:           rgba(79, 156, 249, 0.18);
+  --rg-border-hover:     rgba(79, 156, 249, 0.45);
+  --rg-border-glow:      rgba(79, 156, 249, 0.65);
+
+  /* Gradients */
+  --rg-grad-blue:        linear-gradient(135deg, #4f9cf9, #08cfe0);
+  --rg-grad-purple:      linear-gradient(135deg, #9b6ff8, #4f9cf9);
+  --rg-grad-danger:      linear-gradient(135deg, #f85555, #ff7a00);
+  --rg-grad-success:     linear-gradient(135deg, #12d896, #08cfe0);
+  --rg-grad-card:        linear-gradient(145deg, #0f1624, #161e30);
+
+  /* Shadows */
+  --rg-shadow-sm:        0 2px 8px rgba(0, 0, 0, 0.5);
+  --rg-shadow-md:        0 8px 24px rgba(0, 0, 0, 0.6);
+  --rg-shadow-lg:        0 20px 60px rgba(0, 0, 0, 0.7);
+  --rg-shadow-blue:      0 0 20px rgba(79, 156, 249, 0.3);
+  --rg-shadow-cyan:      0 0 20px rgba(8, 207, 224, 0.3);
+}
+
+/* ---- Scrollbar color tweak ---- */
+::-webkit-scrollbar-thumb {
+  background: rgba(79, 156, 249, 0.35);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(79, 156, 249, 0.55);
+}
