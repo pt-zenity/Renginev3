@@ -1,0 +1,117 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}
+reNgine-ng Settings
+{% endblock title %}
+
+{% block custom_js_css_link %}
+{% endblock custom_js_css_link %}
+
+{% block breadcrumb_title %}
+<li class="breadcrumb-item"><a href="#">Settings</a></li>
+<li class="breadcrumb-item active">API Vault</li>
+{% endblock breadcrumb_title %}
+
+{% block page_title %}
+API Vault
+{% endblock page_title %}
+
+{% block main_content %}
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <form method="POST" autocomplete="off">
+          {% csrf_token %}
+          <div class="col-12">
+            <div class="p-sm-3">
+              {% for apiKey in apiKeys %}
+              <div class="mb-3">
+                <label for="key_{{ apiKey.name | lower }}" class="form-label">{{ apiKey.name }}{% if apiKey.recommended %} <span class="ms-1 badge bg-soft-danger text-danger">🔥 Recommended</span>{% endif %}{% if apiKey.experimental %}<span class="ms-1 badge bg-soft-primary text-primary">Experimental</span>{% endif %}</label>
+                <p class="text-muted">{{ apiKey.text }}</p>
+                  <div class="input-group input-group-merge">
+                    <input class="form-control" type="text" id="key_{{ apiKey.name | lower }}" name="key_{{ apiKey.name | lower }}" placeholder="{% if apiKey.hasKey %}{{ apiKey.name }} API Key configured - Enter new key to update{% else %}Enter {{ apiKey.name }} Key{% endif%}">
+                    <div class="input-group-text delete-secret-group"{% if not apiKey.hasKey %} style="display: none;"{% endif %}>
+                      <span class="delete-secret"></span>
+                    </div>
+                  </div>
+                {% if apiKey.optional %}<span class="text-muted float-end"{% if apiKey.hasKey %} style="display: none;"{% endif %}>This is optional{% if apiKey.recommended %} but recommended.{% endif %}</span>{% endif %}
+              </div>
+              {% endfor %}
+              <div class="mb-0">
+                <button class="btn btn-info float-sm-end my-4" type="submit"> Update API Keys</button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock main_content %}
+
+
+{% block page_level_script %}
+<script>
+  $(document).ready(function() {
+    const keyInfos = {
+      {% for apiKey in apiKeys %}
+      "{{ apiKey.name | lower }}": {
+        "name": "{{ apiKey.name }}",
+        "optional": {% if apiKey.optional %}true{% else %}false{% endif %},
+        "recommended": {% if apiKey.recommended %}true{% else %}false{% endif %},
+      },
+      {% endfor %}
+    }
+
+    $(".delete-secret-group").on("click", function(e) {
+      const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      let id = $(this).siblings("input").attr("id");
+      let data = {
+        keys: [id],
+      };
+      let row = $(this).closest("div.mb3");
+      let secretGroup = $(this);
+      $.ajax({
+        url: "{% url 'api_vault_delete' %}",
+        method: "POST",
+        contentType : 'application/json',
+        dataType: 'json',
+        headers: {'X-CSRFToken': csrftoken},
+        data: JSON.stringify(data),
+        success: function(resData, _textStatus, _jqXHR) {
+          if (resData["status"] == "OK") {
+            Snackbar.show({
+              text: "Api Key successfully deleted",
+              pos: 'top-right',
+              actionTextColor: '#42A5F5',
+              duration: 2500
+            });
+            secretGroup.hide();
+            $("#" + id).attr("placeholder", "Enter " + keyInfos[id.split("_")[1]]["name"] + " Key");
+          } else {
+            Snackbar.show({
+              text: resData["message"],
+              pos: 'top-right',
+              actionTextColor: '#fff',
+              backgroundColor: '#e7515a',
+              duration: 2500
+            });
+          }
+        },
+        error: function(_jqXHR, textStatus, errorThrown) {
+          console.log(data)
+          Snackbar.show({
+            text: (textStatus ? textStatus : '') + (errorThrown ? (' : ' + errorThrown) : ''),
+            pos: 'top-right',
+            actionTextColor: '#fff',
+            backgroundColor: '#e7515a',
+            duration: 2500
+          });
+        }
+      });
+    });
+  });
+</script>
+{% endblock page_level_script %}
