@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <title>reNgine-ng v3.0 — UI Preview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Bootstrap 5 Dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <!-- ApexCharts -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    :root {
+      --bg:       #0a0e1a;
+      --bg-card:  #111827;
+      --bg-card2: #1a2235;
+      --border:   rgba(59,130,246,0.15);
+      --blue:     #3b82f6;
+      --cyan:     #06b6d4;
+      --green:    #10b981;
+      --red:      #ef4444;
+      --orange:   #f59e0b;
+      --purple:   #8b5cf6;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --subtle:   #94a3b8;
+      --grad:     linear-gradient(135deg, #3b82f6, #06b6d4);
+      --grad-r:   linear-gradient(135deg, #ef4444, #f97316);
+      --grad-g:   linear-gradient(135deg, #10b981, #06b6d4);
+      --grad-p:   linear-gradient(135deg, #8b5cf6, #3b82f6);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    /* ── NAVBAR ── */
+    .rg-navbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,14,26,0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+      padding: 0 24px;
+    }
+
+    .rg-navbar::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--blue), var(--cyan), transparent);
+      opacity: 0.5;
+    }
+
+    .navbar-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 60px; gap: 16px;
+    }
+
+    .nav-logo {
+      font-size: 1.3rem; font-weight: 800; letter-spacing: -0.04em;
+      background: var(--grad);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .nav-logo small {
+      font-size: 0.6em; font-weight: 400;
+      -webkit-text-fill-color: var(--muted);
+      color: var(--muted);
+    }
+
+    .nav-menu {
+      display: flex; gap: 2px; list-style: none; margin: 0; padding: 0;
+    }
+
+    .nav-menu a {
+      color: var(--subtle); font-size: 0.875rem; font-weight: 500;
+      text-decoration: none; padding: 8px 13px; border-radius: 7px;
+      transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+      position: relative;
+    }
+
+    .nav-menu a::after {
+      content: '';
+      position: absolute; bottom: 0; left: 8px; right: 8px; height: 2px;
+      background: var(--grad); border-radius: 2px 2px 0 0;
+      transform: scaleX(0); transition: transform 0.2s;
+    }
+
+    .nav-menu a:hover, .nav-menu a.active {
+      color: var(--blue); background: rgba(59,130,246,0.1);
+    }
+
+    .nav-menu a:hover::after, .nav-menu a.active::after { transform: scaleX(1); }
+
+    .nav-right {
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .nav-search {
+      display: flex; align-items: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 7px 12px; gap: 8px; transition: all 0.2s;
+    }
+
+    .nav-search:focus-within {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+
+    .nav-search input {
+      background: none; border: none; color: var(--text); outline: none;
+      font-size: 0.85rem; width: 180px;
+    }
+
+    .nav-search input::placeholder { color: var(--muted); }
+    .nav-search i { color: var(--muted); font-size: 0.8rem; }
+
+    .nav-btn {
+      background: rgba(59,130,246,0.1); border: 1px solid var(--border);
+      color: var(--subtle); border-radius: 7px; padding: 7px 10px;
+      cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+      display: flex; align-items: center; gap: 6px;
+      text-decoration: none;
+    }
+
+    .nav-btn:hover { background: rgba(59,130,246,0.18); color: var(--blue); }
+
+    .scan-badge {
+      background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
+      color: var(--red); border-radius: 7px; padding: 7px 12px; font-size: 0.8rem;
+      font-weight: 600; display: flex; align-items: center; gap: 6px;
+    }
+
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(16,185,129,0.5);
+      animation: livePulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes livePulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.75);} }
+
+    /* ── TOPNAV ── */
+    .rg-topnav {
+      background: rgba(11,15,28,0.9);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      padding: 0 24px;
+    }
+
+    .topnav-inner {
+      display: flex; align-items: center; gap: 4px;
+      height: 44px; position: relative;
+    }
+
+    .topnav-item {
+      color: var(--subtle); font-size: 0.84rem; font-weight: 500;
+      text-decoration: none; padding: 10px 12px; border-radius: 0;
+      transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+      position: relative;
+    }
+
+    .topnav-item::after {
+      content: '';
+      position: absolute; bottom: -1px; left: 0; right: 0; height: 2px;
+      background: var(--grad); transform: scaleX(0); transition: transform 0.2s;
+    }
+
+    .topnav-item:hover, .topnav-item.active {
+      color: var(--blue); background: rgba(59,130,246,0.07);
+    }
+
+    .topnav-item.active::after { transform: scaleX(1); }
+
+    .project-badge {
+      margin-left: auto;
+      padding: 4px 14px; border-radius: 20px;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.25);
+      color: var(--blue); font-size: 0.75rem; font-weight: 600;
+    }
+
+    /* ── PAGE CONTENT ── */
+    .page-content { padding: 24px; position: relative; z-index: 1; }
+
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .page-title {
+      font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em;
+      background: var(--grad);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .page-breadcrumb {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.78rem; color: var(--muted);
+    }
+
+    /* ── STAT CARDS ── */
+    .stat-card {
+      background: linear-gradient(145deg, #111827, #1a2235);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px;
+      position: relative; overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+      animation: fadeInUp 0.5s ease forwards;
+      opacity: 0;
+    }
+
+    .stat-card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:2px;
+      background: var(--grad); opacity: 0.8;
+    }
+
+    .stat-card.danger-card::before  { background: var(--grad-r); }
+    .stat-card.success-card::before { background: var(--grad-g); }
+    .stat-card.purple-card::before  { background: var(--grad-p); }
+    .stat-card.danger-card  { border-color: rgba(239,68,68,0.18); }
+    .stat-card.success-card { border-color: rgba(16,185,129,0.18); }
+    .stat-card.purple-card  { border-color: rgba(139,92,246,0.18); }
+
+    .stat-card:hover {
+      border-color: rgba(59,130,246,0.35);
+      transform: translateY(-4px);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.5), 0 0 20px rgba(59,130,246,0.08);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    .stat-card:nth-child(1) { animation-delay: 0.05s; }
+    .stat-card:nth-child(2) { animation-delay: 0.1s; }
+    .stat-card:nth-child(3) { animation-delay: 0.15s; }
+    .stat-card:nth-child(4) { animation-delay: 0.2s; }
+    .stat-card:nth-child(5) { animation-delay: 0.25s; }
+    .stat-card:nth-child(6) { animation-delay: 0.3s; }
+
+    .stat-top-row {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .stat-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .ic-blue   { background:rgba(59,130,246,0.15); color:var(--blue); box-shadow:0 4px 12px rgba(59,130,246,0.2); }
+    .ic-green  { background:rgba(16,185,129,0.15); color:var(--green); box-shadow:0 4px 12px rgba(16,185,129,0.2); }
+    .ic-red    { background:rgba(239,68,68,0.15);  color:var(--red); box-shadow:0 4px 12px rgba(239,68,68,0.2); }
+    .ic-cyan   { background:rgba(6,182,212,0.15);  color:var(--cyan); box-shadow:0 4px 12px rgba(6,182,212,0.2); }
+    .ic-purple { background:rgba(139,92,246,0.15); color:var(--purple); box-shadow:0 4px 12px rgba(139,92,246,0.2); }
+    .ic-orange { background:rgba(245,158,11,0.15); color:var(--orange); box-shadow:0 4px 12px rgba(245,158,11,0.2); }
+
+    .stat-info-icon { color: var(--muted); font-size: 0.85rem; cursor: help; }
+
+    .stat-num {
+      font-size: 2.1rem; font-weight: 800;
+      line-height: 1; letter-spacing: -0.04em; margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 0.68rem; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--muted); font-weight: 600;
+    }
+
+    .stat-badges {
+      display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px;
+    }
+
+    .sbadge {
+      padding: 3px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 600;
+    }
+
+    .sb-green  { background:rgba(16,185,129,0.1); color:#10b981; border:1px solid rgba(16,185,129,0.22); }
+    .sb-blue   { background:rgba(59,130,246,0.1); color:#60a5fa; border:1px solid rgba(59,130,246,0.22); }
+    .sb-red    { background:rgba(239,68,68,0.1);  color:#f87171; border:1px solid rgba(239,68,68,0.22); }
+    .sb-orange { background:rgba(245,158,11,0.1); color:#fbbf24; border:1px solid rgba(245,158,11,0.22); }
+    .sb-purple { background:rgba(139,92,246,0.1); color:#a78bfa; border:1px solid rgba(139,92,246,0.22); }
+    .sb-muted  { background:rgba(100,116,139,0.1);color:#94a3b8; border:1px solid rgba(100,116,139,0.22); }
+
+    /* ── CARDS ── */
+    .rg-card {
+      background: linear-gradient(145deg, #111827, #1a2235);
+      border: 1px solid var(--border); border-radius: 14px;
+      overflow: hidden; transition: all 0.3s;
+      animation: fadeInUp 0.5s ease forwards; opacity: 0;
+      position: relative;
+    }
+
+    .rg-card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:1px;
+      background: linear-gradient(90deg, transparent, rgba(59,130,246,0.3), transparent);
+    }
+
+    .rg-card:hover {
+      border-color: rgba(59,130,246,0.3);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.5);
+      transform: translateY(-2px);
+    }
+
+    .rg-card .card-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(59,130,246,0.1);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .rg-card .card-head h5 {
+      margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .rg-card .card-body { padding: 20px; }
+
+    .ch-badge {
+      padding: 2px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 600;
+      background: rgba(59,130,246,0.1); color: #60a5fa;
+      border: 1px solid rgba(59,130,246,0.2);
+    }
+
+    /* ── FEED ITEMS ── */
+    .feed-item {
+      padding: 10px 14px; border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(59,130,246,0.08);
+      margin-bottom: 8px; transition: all 0.2s;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+
+    .feed-item:hover {
+      background: rgba(59,130,246,0.06);
+      border-color: rgba(59,130,246,0.2);
+    }
+
+    .feed-dot {
+      width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
+    }
+
+    .fd-running { background:var(--blue); box-shadow:0 0 8px rgba(59,130,246,0.5); animation:livePulse 1.5s infinite; }
+    .fd-done    { background:var(--green); box-shadow:0 0 6px rgba(16,185,129,0.4); }
+    .fd-failed  { background:var(--red); box-shadow:0 0 6px rgba(239,68,68,0.4); }
+
+    .feed-title { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+    .feed-sub   { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .feed-time  { font-size: 0.68rem; color: #475569; margin-top: 3px; }
+
+    /* ── TABLE ── */
+    .rg-table { width:100%; border-collapse:collapse; }
+    .rg-table th {
+      background: rgba(59,130,246,0.05);
+      color: var(--muted); font-size: 0.7rem;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      font-weight: 600; padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .rg-table td {
+      color: var(--text); padding: 10px 14px; font-size: 0.875rem;
+      border-bottom: 1px solid rgba(59,130,246,0.06);
+    }
+    .rg-table tr:hover td { background: rgba(59,130,246,0.04); }
+
+    /* ── VULN SEVERITY ── */
+    .sev { padding: 3px 9px; border-radius: 20px; font-size: 0.68rem; font-weight: 700; }
+    .sev-crit  { background:rgba(255,71,87,0.12); color:#ff4757; border:1px solid rgba(255,71,87,0.25); box-shadow:0 0 6px rgba(255,71,87,0.2); }
+    .sev-high  { background:rgba(255,107,53,0.12);color:#ff6b35; border:1px solid rgba(255,107,53,0.25); }
+    .sev-med   { background:rgba(255,165,2,0.12); color:#ffa502; border:1px solid rgba(255,165,2,0.25); }
+    .sev-low   { background:rgba(236,204,104,0.12);color:#eccc68;border:1px solid rgba(236,204,104,0.25); }
+    .sev-info  { background:rgba(112,161,255,0.12);color:#70a1ff;border:1px solid rgba(112,161,255,0.25); }
+
+    /* ── SCAN PROGRESS ── */
+    .progress-bar-wrap {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px; height: 6px; overflow: hidden; margin-top: 8px;
+    }
+    .progress-bar-fill {
+      height: 100%; border-radius: 10px;
+      background: var(--grad);
+      box-shadow: 0 0 8px rgba(59,130,246,0.4);
+      transition: width 0.8s ease;
+    }
+
+    /* ── SECTION DIVIDER ── */
+    .section-divider {
+      text-align: center; margin: 30px 0 20px; position: relative;
+    }
+    .section-divider::before {
+      content: ''; position: absolute; top: 50%;
+      left: 0; right: 0; height: 1px;
+      background: var(--border);
+    }
+    .section-divider span {
+      position: relative; background: var(--bg);
+      padding: 0 16px; color: var(--muted); font-size: 0.75rem;
+      text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;
+    }
+
+    /* ── CHART CONTAINERS ── */
+    #chart-vuln, #chart-weekly, #chart-topo { min-height: 260px; }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.25); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,0.45); }
+
+    /* ── PAGE TAB SWITCH ── */
+    .tab-switcher {
+      display: flex; gap: 4px; margin-bottom: 24px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border); border-radius: 10px; padding: 4px;
+      width: fit-content;
+    }
+
+    .tab-btn {
+      padding: 7px 18px; border-radius: 7px; border: none;
+      background: transparent; color: var(--muted); font-size: 0.85rem;
+      font-weight: 500; cursor: pointer; transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .tab-btn.active {
+      background: rgba(59,130,246,0.18); color: var(--blue);
+      box-shadow: 0 0 15px rgba(59,130,246,0.1);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .nav-menu { display: none; }
+      .nav-search { display: none; }
+      .page-content { padding: 16px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- PAGE LOAD BAR -->
+  <div id="loadBar" style="position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,#3b82f6,#06b6d4);z-index:9999;box-shadow:0 0 10px #3b82f6;transition:width 0.3s;"></div>
+
+  <!-- ══════════════════════════════════════
+       NAVBAR
+  ══════════════════════════════════════ -->
+  <nav class="rg-navbar">
+    <div class="navbar-inner">
+
+      <!-- Logo -->
+      <a href="#" class="nav-logo">
+        <i class="fa fa-shield-halved me-2" style="font-size:1.1rem;"></i>
+        reNgine-ng <small>v3.0.0</small>
+      </a>
+
+      <!-- Search -->
+      <div class="nav-search">
+        <i class="fa fa-magnifying-glass"></i>
+        <input type="text" placeholder="Universal Search…  (Ctrl+K)">
+      </div>
+
+      <!-- Right actions -->
+      <div class="nav-right">
+        <a href="#" class="nav-btn"><i class="fa fa-folder-open"></i> Projects <i class="fa fa-chevron-down" style="font-size:0.6rem;"></i></a>
+        <a href="#" class="nav-btn" style="background:linear-gradient(135deg,rgba(59,130,246,0.2),rgba(6,182,212,0.2));color:#60a5fa;"><i class="fa fa-plus"></i> Quick Add</a>
+        <a href="#" class="nav-btn"><i class="fa fa-grid-2-plus"></i></a>
+        <div class="scan-badge"><div class="live-dot"></div> 2 Running</div>
+        <a href="#" class="nav-btn"><i class="fa fa-user-circle"></i> rengine</a>
+        <a href="#" class="nav-btn"><i class="fa fa-sun"></i>&nbsp;<i class="fa fa-moon"></i></a>
+      </div>
+
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════
+       TOP NAV MENU
+  ══════════════════════════════════════ -->
+  <div class="rg-topnav">
+    <div class="topnav-inner">
+      <a href="#" class="topnav-item active"><i class="fa fa-house"></i> Dashboard</a>
+      <a href="#" class="topnav-item"><i class="fa fa-crosshairs"></i> Targets</a>
+      <a href="#" class="topnav-item"><i class="fa fa-clock-rotate-left"></i> Scan History <i class="fa fa-chevron-down" style="font-size:0.6rem;"></i></a>
+      <a href="#" class="topnav-item"><i class="fa fa-bug"></i> Vulnerabilities</a>
+      <a href="#" class="topnav-item"><i class="fa fa-check-square"></i> To-do</a>
+      <a href="#" class="topnav-item"><i class="fa fa-briefcase"></i> Organization</a>
+      <a href="#" class="topnav-item"><i class="fa fa-microchip"></i> Scan Engine <i class="fa fa-chevron-down" style="font-size:0.6rem;"></i></a>
+      <a href="#" class="topnav-item"><i class="fa fa-gear"></i> Settings <i class="fa fa-chevron-down" style="font-size:0.6rem;"></i></a>
+      <span class="project-badge"><i class="fa fa-folder me-1"></i>Default Project</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PAGE CONTENT
+  ══════════════════════════════════════ -->
+  <div class="page-content">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="fa fa-gauge-high me-2"></i>Dashboard</div>
+        <div class="page-breadcrumb"><span>reNgine-ng v3.0.0</span></div>
+      </div>
+      <div class="scan-badge"><div class="live-dot"></div>&nbsp; 2 Scans Active</div>
+    </div>
+
+    <!-- ─── STAT CARDS ROW 1 ─── -->
+    <div class="row g-3 mb-3">
+
+      <div class="col-xl-3 col-lg-3 col-md-6 col-6">
+        <div class="stat-card">
+          <div class="stat-top-row">
+            <div class="stat-icon ic-blue"><i class="fa fa-crosshairs"></i></div>
+            <i class="fa fa-circle-info stat-info-icon"></i>
+          </div>
+          <div class="stat-num text-primary" id="cnt-targets">0</div>
+          <div class="stat-label">Total Targets</div>
+          <div class="stat-badges">
+            <span class="sbadge sb-blue"><i class="fa fa-folder me-1"></i>Default Project</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-lg-3 col-md-6 col-6">
+        <div class="stat-card success-card">
+          <div class="stat-top-row">
+            <div class="stat-icon ic-green"><i class="fa fa-sitemap"></i></div>
+            <i class="fa fa-circle-info stat-info-icon"></i>
+          </div>
+          <div class="stat-num" style="color:var(--green)" id="cnt-sub">0</div>
+          <div class="stat-label">Total Subdomains</div>
+          <div class="stat-badges">
+            <span class="sbadge sb-green"><i class="fa fa-circle-dot me-1"></i>8,432 Alive</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-lg-3 col-md-6 col-6">
+        <div class="stat-card purple-card">
+          <div class="stat-top-row">
+            <div class="stat-icon ic-cyan"><i class="fa fa-link"></i></div>
+            <i class="fa fa-circle-info stat-info-icon"></i>
+          </div>
+          <div class="stat-num" style="color:var(--cyan)" id="cnt-ep">0</div>
+          <div class="stat-label">Total Endpoints</div>
+          <div class="stat-badges">
+            <span class="sbadge sb-green">12,980 Alive</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-lg-3 col-md-6 col-6">
+        <div class="stat-card danger-card">
+          <div class="stat-top-row">
+            <div class="stat-icon ic-red"><i class="fa fa-bug"></i></div>
+            <i class="fa fa-circle-info stat-info-icon"></i>
+          </div>
+          <div class="stat-num" style="color:var(--red)" id="cnt-vuln">0</div>
+          <div class="stat-label">Total Vulnerabilities</div>
+          <div class="stat-badges">
+            <span class="sbadge sb-red">47 Critical</span>
+            <span class="sbadge sb-orange">128 High</span>
+            <span class="sbadge sb-orange">304 Med</span>
+            <span class="sbadge sb-muted">892 Low</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ─── STAT CARDS ROW 2 ─── -->
+    <div class="row g-3 mb-3">
+
+      <div class="col-xl-3 col-lg-3 col-md-6 col-6">
+        <div class="stat-card">
+          <div class="stat-top-row">
+            <div class="stat-icon ic-orange"><i class="fa fa-radar"></i></div>
+            <i class="fa fa-circle-info stat-info-icon"></i>
+          </div>
+          <div class="stat-num" style="color:var(--orange)" id="cnt-scans">0</div>
+          <div class="stat-label">Total Scans</div>
+          <div class="stat-badges">
+            <span class="sbadge sb-green">241 Done</span>
+            <span class="sbadge sb-blue"><i class="fa fa-spinner fa-spin me-1"></i>2 Running</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-lg-3 col-md-6 col-6">
+        <div class="stat-card purple-card">
+          <div class="stat-top-row">
+            <div class="stat-icon ic-purple"><i class="fa fa-code-branch"></i></div>
+            <i class="fa fa-circle-info stat-info-icon"></i>
+          </div>
+          <div class="stat-num" style="color:var(--purple)" id="cnt-sub2">0</div>
+          <div class="stat-label">Total Sub-Scans</div>
+          <div class="stat-badges">
+            <span class="sbadge sb-green">1,843 Done</span>
+            <span class="sbadge sb-muted">7 Running</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scan Progress Card -->
+      <div class="col-xl-6 col-lg-6 col-md-12">
+        <div class="rg-card" style="animation-delay:0.3s;">
+          <div class="card-head">
+            <h5><i class="fa fa-satellite-dish" style="color:var(--blue);"></i>Active Scans</h5>
+            <span class="ch-badge" style="background:rgba(16,185,129,0.1);color:#10b981;border-color:rgba(16,185,129,0.2);">2 Running</span>
+          </div>
+          <div class="card-body">
+            <div style="margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div style="font-size:0.85rem;font-weight:600;">Full Recon — example.com</div>
+                <span class="sbadge sb-blue" style="font-size:0.65rem;">73%</span>
+              </div>
+              <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:73%;"></div></div>
+              <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">
+                <i class="fa fa-clock me-1"></i>Started 14 mins ago · ETA ~5 mins
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div style="font-size:0.85rem;font-weight:600;">Port Scan — 192.168.1.0/24</div>
+                <span class="sbadge sb-orange" style="font-size:0.65rem;">31%</span>
+              </div>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" style="width:31%;background:linear-gradient(135deg,#f59e0b,#f97316);box-shadow:0 0 8px rgba(245,158,11,0.4);"></div>
+              </div>
+              <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">
+                <i class="fa fa-clock me-1"></i>Started 2 mins ago · ETA ~18 mins
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ─── MAIN BOTTOM ROW ─── -->
+    <div class="row g-3">
+
+      <!-- Left: Activity + Vuln Feed -->
+      <div class="col-xl-3 col-lg-3 col-12">
+
+        <!-- Activity Feed -->
+        <div class="rg-card mb-3" style="animation-delay:0.35s;">
+          <div class="card-head">
+            <h5><i class="fa fa-bolt"></i>Activity Feed</h5>
+            <span class="ch-badge">12</span>
+          </div>
+          <div class="card-body" style="max-height:320px;overflow-y:auto;padding:14px;">
+            <div class="feed-item">
+              <div class="feed-dot fd-running"></div>
+              <div>
+                <div class="feed-title">Nuclei Scan</div>
+                <div class="feed-sub">Initiated for <span class="sbadge sb-blue" style="font-size:0.65rem;">example.com</span></div>
+                <div class="feed-time"><i class="fa fa-clock me-1"></i>2 minutes ago</div>
+              </div>
+            </div>
+            <div class="feed-item">
+              <div class="feed-dot fd-done"></div>
+              <div>
+                <div class="feed-title">Subdomain Enum</div>
+                <div class="feed-sub">Completed for <span class="sbadge sb-green" style="font-size:0.65rem;">target.io</span></div>
+                <div class="feed-time"><i class="fa fa-clock me-1"></i>15 minutes ago</div>
+              </div>
+            </div>
+            <div class="feed-item">
+              <div class="feed-dot fd-done"></div>
+              <div>
+                <div class="feed-title">Endpoint Discovery</div>
+                <div class="feed-sub">Completed for <span class="sbadge sb-green" style="font-size:0.65rem;">api.example.com</span></div>
+                <div class="feed-time"><i class="fa fa-clock me-1"></i>32 minutes ago</div>
+              </div>
+            </div>
+            <div class="feed-item">
+              <div class="feed-dot fd-failed"></div>
+              <div>
+                <div class="feed-title">Screenshot Capture</div>
+                <div class="feed-sub">Aborted for <span class="sbadge sb-red" style="font-size:0.65rem;">internal.corp</span></div>
+                <div class="feed-time"><i class="fa fa-clock me-1"></i>1 hour ago</div>
+              </div>
+            </div>
+            <div class="feed-item">
+              <div class="feed-dot fd-done"></div>
+              <div>
+                <div class="feed-title">Scan Completed</div>
+                <div class="feed-sub">Full recon <span class="sbadge sb-green" style="font-size:0.65rem;">staging.io</span></div>
+                <div class="feed-time"><i class="fa fa-clock me-1"></i>2 hours ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vuln Feed -->
+        <div class="rg-card" style="animation-delay:0.4s;">
+          <div class="card-head">
+            <h5><i class="fa fa-bug" style="color:var(--red);"></i>Vuln Feed</h5>
+            <span class="ch-badge" style="background:rgba(239,68,68,0.1);color:#f87171;border-color:rgba(239,68,68,0.2);">8</span>
+          </div>
+          <div class="card-body" style="max-height:380px;overflow-y:auto;padding:14px;">
+            <a href="#" class="feed-item" style="text-decoration:none;display:flex;">
+              <div style="flex:1;">
+                <div class="d-flex gap-2 mb-1"><span class="sev sev-crit">Critical</span></div>
+                <div class="feed-title">Spring4Shell RCE (CVE-2022-22965)</div>
+                <div class="feed-sub"><i class="fa fa-globe me-1"></i>api.example.com</div>
+                <div class="feed-time"><i class="fa fa-clock me-1"></i>5 minutes ago</div>
+              </div>
+            </a>
+            <a href="#" class="feed-item" style="text-decoration:none;display:flex;">
+              <div style="flex:1;">
+                <div class="d-flex gap-2 mb-1"><span class="sev sev-high">High</span></div>
+                <div class="feed-title">SQL Injection — Error Based</div>
+                <div class="feed-sub"><i class="fa fa-globe me-1"></i>shop.example.com/search</div>
+                <div class="feed-time"><i class="fa fa-clock me-1"></i>23 minutes ago</div>
+              </div>
+            </a>
+            <a href="#" class="feed-item" style="text-decoration:none;display:flex;">
+              <div style="flex:1;">
+                <div class="d-flex gap-2 mb-1"><span class="sev sev-med">Medium</span></div>
+                <div class="feed-title">CORS Misconfiguration</div>
+                <div class="feed-sub"><i class="fa fa-globe me-1"></i>cdn.example.com</div>
+                <div class="feed-time"><i class="fa fa-clock me-1"></i>1 hour ago</div>
+              </div>
+            </a>
+            <a href="#" class="feed-item" style="text-decoration:none;display:flex;">
+              <div style="flex:1;">
+                <div class="d-flex gap-2 mb-1"><span class="sev sev-crit">Critical</span></div>
+                <div class="feed-title">Log4Shell (CVE-2021-44228)</div>
+                <div class="feed-sub"><i class="fa fa-globe me-1"></i>logs.example.com</div>
+                <div class="feed-time"><i class="fa fa-clock me-1"></i>2 hours ago</div>
+              </div>
+            </a>
+            <a href="#" class="feed-item" style="text-decoration:none;display:flex;">
+              <div style="flex:1;">
+                <div class="d-flex gap-2 mb-1"><span class="sev sev-low">Low</span></div>
+                <div class="feed-title">Missing Security Headers</div>
+                <div class="feed-sub"><i class="fa fa-globe me-1"></i>www.example.com</div>
+                <div class="feed-time"><i class="fa fa-clock me-1"></i>3 hours ago</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right: Charts + Tables -->
+      <div class="col-xl-9 col-lg-9 col-12">
+
+        <!-- Vuln Severity Chart + Breakdown -->
+        <div class="row g-3 mb-3">
+          <div class="col-xl-5 col-12">
+            <div class="rg-card" style="animation-delay:0.4s;">
+              <div class="card-head">
+                <h5><i class="fa fa-chart-pie"></i>Vulnerability Breakdown</h5>
+              </div>
+              <div class="card-body">
+                <div id="chart-vuln"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-7 col-12">
+            <div class="rg-card" style="animation-delay:0.45s;">
+              <div class="card-head">
+                <h5><i class="fa fa-chart-bar"></i>Weekly Discovery Trend</h5>
+              </div>
+              <div class="card-body">
+                <div id="chart-weekly"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Vulnerabilities Table -->
+        <div class="rg-card" style="animation-delay:0.5s;">
+          <div class="card-head">
+            <h5><i class="fa fa-table-list"></i>Recent Vulnerabilities</h5>
+            <a href="#" class="sbadge sb-blue" style="text-decoration:none;">View All →</a>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <table class="rg-table">
+              <thead>
+                <tr>
+                  <th>Severity</th>
+                  <th>Vulnerability</th>
+                  <th>Target</th>
+                  <th>Tool</th>
+                  <th>Discovered</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="sev sev-crit">Critical</span></td>
+                  <td>Spring4Shell RCE (CVE-2022-22965)</td>
+                  <td style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;">api.example.com</td>
+                  <td><span class="sbadge sb-purple">Nuclei</span></td>
+                  <td style="color:var(--muted);">5 min ago</td>
+                </tr>
+                <tr>
+                  <td><span class="sev sev-high">High</span></td>
+                  <td>SQL Injection — Error Based</td>
+                  <td style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;">shop.example.com</td>
+                  <td><span class="sbadge sb-orange">SQLMap</span></td>
+                  <td style="color:var(--muted);">23 min ago</td>
+                </tr>
+                <tr>
+                  <td><span class="sev sev-crit">Critical</span></td>
+                  <td>Log4Shell (CVE-2021-44228)</td>
+                  <td style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;">logs.example.com</td>
+                  <td><span class="sbadge sb-purple">Nuclei</span></td>
+                  <td style="color:var(--muted);">2 hrs ago</td>
+                </tr>
+                <tr>
+                  <td><span class="sev sev-med">Medium</span></td>
+                  <td>CORS Misconfiguration</td>
+                  <td style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;">cdn.example.com</td>
+                  <td><span class="sbadge sb-blue">Custom</span></td>
+                  <td style="color:var(--muted);">1 hr ago</td>
+                </tr>
+                <tr>
+                  <td><span class="sev sev-high">High</span></td>
+                  <td>Open Redirect</td>
+                  <td style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;">auth.example.com</td>
+                  <td><span class="sbadge sb-purple">Nuclei</span></td>
+                  <td style="color:var(--muted);">3 hrs ago</td>
+                </tr>
+                <tr>
+                  <td><span class="sev sev-low">Low</span></td>
+                  <td>Missing Security Headers</td>
+                  <td style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;">www.example.com</td>
+                  <td><span class="sbadge sb-muted">HTTPx</span></td>
+                  <td style="color:var(--muted);">3 hrs ago</td>
+                </tr>
+                <tr>
+                  <td><span class="sev sev-med">Medium</span></td>
+                  <td>Spring Boot Actuator Exposed</td>
+                  <td style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;">internal.example.com</td>
+                  <td><span class="sbadge sb-purple">Nuclei</span></td>
+                  <td style="color:var(--muted);">5 hrs ago</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div><!-- end row -->
+
+  </div><!-- end page-content -->
+
+  <!-- Bootstrap -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // ── Page load bar ──
+    const bar = document.getElementById('loadBar');
+    let w = 0;
+    const t = setInterval(() => { w += 8; bar.style.width = Math.min(w, 90) + '%'; if (w >= 90) clearInterval(t); }, 80);
+    window.addEventListener('load', () => {
+      clearInterval(t); bar.style.width = '100%';
+      setTimeout(() => { bar.style.opacity = '0'; setTimeout(() => bar.remove(), 400); }, 200);
+    });
+
+    // ── Animated Counters ──
+    function countUp(id, target, duration) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const start = performance.now();
+      const ease = t => 1 - Math.pow(1 - t, 3);
+      (function step(now) {
+        const p = Math.min((now - start) / duration, 1);
+        el.textContent = Math.round(ease(p) * target).toLocaleString();
+        if (p < 1) requestAnimationFrame(step);
+        else el.textContent = target.toLocaleString();
+      })(start);
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        countUp('cnt-targets', 87,   1000);
+        countUp('cnt-sub',    12458, 1400);
+        countUp('cnt-ep',     38947, 1600);
+        countUp('cnt-vuln',   1371,  1200);
+        countUp('cnt-scans',  243,   1100);
+        countUp('cnt-sub2',   1850,  1300);
+      }, 200);
+    });
+
+    // ── Vuln Donut Chart ──
+    new ApexCharts(document.getElementById('chart-vuln'), {
+      chart: { type: 'donut', height: 260, background: 'transparent', animations: { enabled: true, speed: 800 } },
+      series: [47, 128, 304, 892, 310],
+      labels: ['Critical', 'High', 'Medium', 'Low', 'Info'],
+      colors: ['#ff4757', '#ff6b35', '#ffa502', '#eccc68', '#70a1ff'],
+      legend: { labels: { colors: '#94a3b8' }, fontSize: '12px' },
+      dataLabels: { enabled: true, style: { fontSize: '11px', colors: ['#0a0e1a'] } },
+      plotOptions: { pie: { donut: { size: '65%',
+        labels: { show: true,
+          total: { show: true, label: 'Total', color: '#94a3b8', fontSize: '13px',
+            formatter: () => '1,681' }
+        }
+      }}},
+      stroke: { width: 0 },
+      tooltip: {
+        theme: 'dark',
+        style: { background: '#1e293b', color: '#e2e8f0' }
+      },
+      theme: { mode: 'dark' }
+    }).render();
+
+    // ── Weekly Trend Chart ──
+    new ApexCharts(document.getElementById('chart-weekly'), {
+      chart: { type: 'area', height: 260, background: 'transparent',
+        toolbar: { show: false },
+        animations: { enabled: true, speed: 1000 }
+      },
+      series: [
+        { name: 'Subdomains', data: [120, 245, 318, 490, 620, 740, 892] },
+        { name: 'Vulnerabilities', data: [32, 87, 134, 210, 285, 340, 421] },
+        { name: 'Endpoints',  data: [850, 1200, 1800, 2400, 3100, 3800, 4200] },
+      ],
+      xaxis: { categories: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+        labels: { style: { colors: '#64748b', fontSize: '11px' } }
+      },
+      yaxis: { labels: { style: { colors: '#64748b', fontSize: '11px' } } },
+      colors: ['#10b981', '#ef4444', '#3b82f6'],
+      fill: {
+        type: 'gradient',
+        gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.02, stops: [0, 100] }
+      },
+      stroke: { curve: 'smooth', width: 2 },
+      grid: { borderColor: 'rgba(59,130,246,0.08)', strokeDashArray: 4 },
+      legend: { labels: { colors: '#94a3b8' } },
+      tooltip: { theme: 'dark' },
+      theme: { mode: 'dark' }
+    }).render();
+
+    // ── Keyboard shortcut ──
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.querySelector('.nav-search input').focus();
+      }
+    });
+  </script>
+
+</body>
+</html>

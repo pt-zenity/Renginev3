@@ -3,8 +3,19 @@ from urllib.parse import urlparse
 
 from django.apps import apps
 from django.contrib.auth.models import User
-from django.contrib.postgres.fields import ArrayField
+from django.conf import settings
 from django.db import models
+
+# Use JSONField as a drop-in replacement for ArrayField so the codebase
+# works with both PostgreSQL (production) and SQLite (dev/test).
+_db_engine = settings.DATABASES.get('default', {}).get('ENGINE', '')
+if 'postgresql' in _db_engine or 'postgis' in _db_engine:
+    from django.contrib.postgres.fields import ArrayField
+else:
+    class ArrayField(models.JSONField):
+        """Fallback ArrayField using JSONField for SQLite/dev environments."""
+        def __init__(self, base_field=None, size=None, **kwargs):
+            super().__init__(**kwargs)
 from django.db.models import Count, Q
 from django.db.models.functions import TruncDay
 from django.utils import timezone
