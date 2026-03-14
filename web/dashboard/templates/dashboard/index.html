@@ -14,114 +14,6 @@ Dashboard
 <link rel="stylesheet" type="text/css" href="{% static 'custom/custom.css' %}">
 <link rel="stylesheet" type="text/css" href="{% static 'plugins/j-map/jquery-jvectormap.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/6.6.3/css/flag-icons.min.css" integrity="sha512-uvXdJud8WaOlQFjlz9B15Yy2Au/bMAvz79F7Xa6OakCl2jvQPdHD0hb3dEqZRdSwG4/sknePXlE7GiarwA/9Wg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<style>
-/* Dashboard Pro Styles */
-.pro-stat-card {
-  background: linear-gradient(145deg, #111827, #1a2235) !important;
-  border: 1px solid rgba(59,130,246,0.12) !important;
-  border-radius: 14px !important;
-  padding: 20px !important;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-}
-.pro-stat-card::before {
-  content:'';
-  position:absolute;
-  top:0;left:0;right:0;
-  height:2px;
-  background: var(--rg-grad-blue, linear-gradient(135deg,#3b82f6,#06b6d4));
-  opacity:0.7;
-}
-.pro-stat-card:hover {
-  border-color: rgba(59,130,246,0.3) !important;
-  transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(0,0,0,0.5), 0 0 20px rgba(59,130,246,0.08) !important;
-}
-.pro-stat-card.danger-card::before  { background: linear-gradient(135deg,#ef4444,#f97316); }
-.pro-stat-card.success-card::before { background: linear-gradient(135deg,#10b981,#06b6d4); }
-.pro-stat-card.purple-card::before  { background: linear-gradient(135deg,#8b5cf6,#3b82f6); }
-.pro-stat-card.danger-card  { border-color: rgba(239,68,68,0.15) !important; }
-.pro-stat-card.success-card { border-color: rgba(16,185,129,0.15) !important; }
-.pro-stat-card.purple-card  { border-color: rgba(139,92,246,0.15) !important; }
-
-.stat-top-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
-.stat-icon-circle {
-  width:46px; height:46px; border-radius:12px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:1.2rem; flex-shrink:0;
-}
-.stat-icon-circle.blue   { background:rgba(59,130,246,0.15); color:#3b82f6; box-shadow:0 4px 12px rgba(59,130,246,0.2); }
-.stat-icon-circle.green  { background:rgba(16,185,129,0.15); color:#10b981; box-shadow:0 4px 12px rgba(16,185,129,0.2); }
-.stat-icon-circle.red    { background:rgba(239,68,68,0.15);  color:#ef4444; box-shadow:0 4px 12px rgba(239,68,68,0.2);  }
-.stat-icon-circle.purple { background:rgba(139,92,246,0.15); color:#8b5cf6; box-shadow:0 4px 12px rgba(139,92,246,0.2); }
-.stat-icon-circle.cyan   { background:rgba(6,182,212,0.15);  color:#06b6d4; box-shadow:0 4px 12px rgba(6,182,212,0.2);  }
-.stat-icon-circle.orange { background:rgba(245,158,11,0.15); color:#f59e0b; box-shadow:0 4px 12px rgba(245,158,11,0.2); }
-
-.stat-info-tooltip {
-  color:#64748b; cursor:help; font-size:0.85rem;
-  transition: color 0.2s;
-}
-.stat-info-tooltip:hover { color:#3b82f6; }
-.stat-big-number {
-  font-size:2.1rem; font-weight:800;
-  line-height:1; letter-spacing:-0.04em;
-  margin-bottom:4px;
-}
-.stat-label-text {
-  font-size:0.7rem; text-transform:uppercase;
-  letter-spacing:0.1em; color:#64748b; font-weight:600;
-}
-.stat-sub-badges { display:flex; flex-wrap:wrap; gap:5px; margin-top:12px; }
-.stat-sub-badge {
-  padding:3px 9px; border-radius:20px; font-size:0.68rem; font-weight:600;
-}
-.stat-sub-badge.green  { background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.22); }
-.stat-sub-badge.red    { background:rgba(239,68,68,0.12);  color:#ef4444; border:1px solid rgba(239,68,68,0.22); }
-.stat-sub-badge.blue   { background:rgba(59,130,246,0.12); color:#60a5fa; border:1px solid rgba(59,130,246,0.22); }
-.stat-sub-badge.orange { background:rgba(245,158,11,0.12); color:#f59e0b; border:1px solid rgba(245,158,11,0.22); }
-.stat-sub-badge.purple { background:rgba(139,92,246,0.12); color:#a78bfa; border:1px solid rgba(139,92,246,0.22); }
-.stat-sub-badge.muted  { background:rgba(100,116,139,0.12);color:#94a3b8; border:1px solid rgba(100,116,139,0.22); }
-
-/* Activity / Vuln Feed */
-.pro-feed-item {
-  padding:10px 14px; border-radius:10px;
-  background:rgba(255,255,255,0.02);
-  border:1px solid rgba(59,130,246,0.08);
-  margin-bottom:8px;
-  transition: all 0.2s ease;
-}
-.pro-feed-item:hover {
-  background:rgba(59,130,246,0.06);
-  border-color:rgba(59,130,246,0.18);
-}
-.feed-status-dot {
-  width:8px; height:8px; border-radius:50%;
-  flex-shrink:0; margin-top:5px;
-}
-.feed-status-dot.running { background:#3b82f6; box-shadow:0 0 8px rgba(59,130,246,0.5); animation:livePulse 1.5s infinite; }
-.feed-status-dot.done    { background:#10b981; box-shadow:0 0 6px rgba(16,185,129,0.4); }
-.feed-status-dot.failed  { background:#ef4444; box-shadow:0 0 6px rgba(239,68,68,0.4); }
-@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.75);} }
-
-/* Section headers */
-.section-header {
-  display:flex; align-items:center; justify-content:space-between;
-  margin-bottom:16px; padding-bottom:12px;
-  border-bottom:1px solid rgba(59,130,246,0.1);
-}
-.section-header h5 {
-  font-size:0.9rem; font-weight:700;
-  color:#e2e8f0; margin:0;
-  display:flex; align-items:center; gap:8px;
-}
-.section-header h5 i { color:#3b82f6; }
-.section-badge {
-  padding:2px 9px; border-radius:20px; font-size:0.68rem; font-weight:600;
-  background:rgba(59,130,246,0.1); color:#60a5fa;
-  border:1px solid rgba(59,130,246,0.2);
-}
-</style>
 {% endblock custom_js_css_link %}
 
 {% block breadcrumb_title %}
@@ -272,8 +164,6 @@ Dashboard
 						No activity yet. Start a scan to see live updates.
 					</div>
 					{% endfor %}
-				</div>
-				{% comment %}Keep the closing tags from the original below{% endcomment %}
 				</div>
 			</div>
 		</div>
